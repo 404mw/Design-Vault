@@ -36,6 +36,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local vault data — every deployment's own DB and uploads, never published
+/data/
+/public/uploads/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

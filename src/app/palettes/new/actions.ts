@@ -1,0 +1,68 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import crypto from "node:crypto";
+import { db } from "@/lib/db";
+import { COLOR_ROLES, type ColorRole } from "@/lib/constants";
+
+// Hex validation choice: require a full 6-digit #RRGGBB and reject 3-digit
+// shorthand rather than expand it. The paired <input type="color"> in
+// PaletteColorRows always emits 6-digit hex, so this constraint never bites
+// the normal picker flow — it only rejects hand-typed shorthand, which is
+// fine for a private single-user tool.
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
+type DraftColor = { name: string; hex: string; role: ColorRole };
+
+export async function createPalette(formData: FormData): Promise<void> {
+  // Palettes have no user-facing name (removed from the form and every
+  // display) — this is an internal-only label, never shown, that exists
+  // purely because the DB column is NOT NULL and the export route needs
+  // *some* string to fall back on.
+  const name = `palette-${crypto.randomUUID().slice(0, 8)}`;
+
+  const names = formData.getAll("color_name").map((v) => String(v));
+  const hexes = formData.getAll("color_hex").map((v) => String(v));
+  const roles = formData.getAll("color_role").map((v) => String(v));
+
+  const rowCount = Math.max(names.length, hexes.length, roles.length);
+  const complete: DraftColor[] = [];
+
+  for (let i = 0; i < rowCount; i++) {
+    const rowName = (names[i] ?? "").trim();
+    const rowHex = (hexes[i] ?? "").trim();
+    const rowRole = (roles[i] ?? "").trim();
+
+    // A row where every field is blank is just an untouched extra row —
+    // skip it rather than fail the whole submission on it.
+    if (!rowName && !rowHex && !rowRole) continue;
+
+    if (!rowName || !rowHex || !rowRole) {
+      throw new Error(`Color row ${i + 1} is incomplete — name, hex, and role are all required.`);
+    }
+    if (!HEX_RE.test(rowHex)) {
+      throw new Error(`Color row ${i + 1} has an invalid hex value "${rowHex}" — expected #RRGGBB.`);
+    }
+    if (!(COLOR_ROLES as readonly string[]).includes(rowRole)) {
+      throw new Error(`Color row ${i + 1} has an unknown role "${rowRole}".`);
+    }
+
+    complete.push({ name: rowName, hex: rowHex, role: rowRole as ColorRole });
+  }
+
+  if (complete.length < 2) {
+    throw new Error("A palette needs at least 2 complete colors (name, hex, and role each).");
+  }
+
+  const result = db.prepare("INSERT INTO palettes (name) VALUES (?)").run(name);
+  const paletteId = result.lastInsertRowid;
+
+  const insertColor = db.prepare(
+    "INSERT INTO palette_colors (palette_id, name, hex, role, position) VALUES (?, ?, ?, ?, ?)"
+  );
+  complete.forEach((color, position) => {
+    insertColor.run(paletteId, color.name, color.hex, color.role, position);
+  });
+
+  redirect("/palettes");
+}

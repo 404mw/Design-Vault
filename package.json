@@ -9,17 +9,21 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "fontkit": "^2.0.4",
+    "libarchive.js": "2.0.2",
     "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/fontkit": "^2.0.9",
+    "@types/node": "^24.13.3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
+    "playwright": "^1.62.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

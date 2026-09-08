@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored libarchive.js worker bundle, copied verbatim from
+    // node_modules/libarchive.js/dist — not application source.
+    "public/libarchive/**",
   ]),
 ]);
 

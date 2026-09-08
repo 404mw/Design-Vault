@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+
+  --paper: #16130d;
+  --paper-raised: #221d14;
+  --paper-deep: #0d0a06;
+  --ink: #f3ead6;
+  --ink-soft: #b8a98a;
+  --ink-faint: #93856a;
+  --line: #362f21;
+  --line-strong: #4d4430;
+  --accent: #e2632f;
+  --accent-soft: #b98567;
+
+  --font-display: var(--font-caslon-display);
+  --font-serif: var(--font-caslon-text);
+  --font-caption: var(--font-barlow-condensed);
+  --font-catalog-mono: var(--font-spline-mono);
+
+  --text-2xs: 0.6875rem;
+  --text-3xs: 0.625rem;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-paper-deep: var(--paper-deep);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-display);
+  --font-serif: var(--font-serif);
+  --font-caption: var(--font-caption);
+  --font-catalog-mono: var(--font-catalog-mono);
+
+  --text-2xs: var(--text-2xs);
+  --text-2xs--line-height: 1.2;
+  --text-3xs: var(--text-3xs);
+  --text-3xs--line-height: 1.2;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-serif);
+}
+
+/* Specimen-catalog primitives shared across all three routes.
+   Tracked, small-caps caption style used for spec labels, plate numbers,
+   classification headings — the print convention this whole world borrows. */
+.catalog-label {
+  font-family: var(--font-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 500;
+}
+
+.catalog-number {
+  font-family: var(--font-catalog-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--accent-soft);
+}
+
+.hairline {
+  border-color: var(--line);
+}
+
+/* Ink stamp marks used for verdicts — shape carries meaning, not color. */
+.stamp-ring {
+  border: 1.5px solid var(--accent);
+  border-radius: 9999px;
+  color: var(--accent);
+}
+
+.stamp-void {
+  color: var(--ink-faint);
 }
