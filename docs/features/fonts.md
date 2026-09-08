@@ -26,10 +26,19 @@ holding stale content on other navigations.
 
 ## Browse grid (`/fonts`)
 
-Browse-first: the grid always renders every font (`ORDER BY id DESC`) by default; search narrows
-it, it never gates it (Constitution Rule 002). `dynamic = "force-dynamic"`.
+Browse-first: the grid always renders every font (`ORDER BY id DESC`) by default; search and the
+licence filter narrow it, they never gate it (Constitution Rule 002). `dynamic =
+"force-dynamic"`.
 
-Search (`q`) matches `family_name` or `foundry` via `LIKE %q%`.
+Search (`q`) matches `family_name` or `foundry` via `LIKE %q%`. Additional filter: `licence`,
+validated against `LICENCES` in `src/lib/constants.ts` before being applied — an unrecognized value
+is silently ignored rather than erroring.
+
+Search and the licence filter are client-driven, via the shared `IndexBar`/`FilterSelect`
+components (see `docs/features/screens.md` for the shared mechanism): typing debounces ~300ms
+before updating the URL's `q` query param, no Enter needed; selecting a licence in the dropdown
+applies immediately, no debounce. Either way this `force-dynamic` page re-renders against the
+updated query params exactly as before.
 
 Each grid card (`SpecimenPlate`) shows the family name as its title, and as specs: either the
 number of variants (`"{n} variants"`, counted from `font_files` plus the primary row) if more than
@@ -198,7 +207,7 @@ to `/fonts`.
 ## Deliberate deviations from generic CRUD
 
 - **Browse-first landing, not search-first.** Per Constitution Rule 002, the grid always shows
-  every font; search narrows it, never gates it.
+  every font; search and the licence filter narrow it, never gate it.
 - **Family name and weight label are always parsed from the file, never user-entered.** The add
   form has no text input for either — this is a deliberate accuracy constraint (a font's own
   metadata is authoritative), not a missing field.

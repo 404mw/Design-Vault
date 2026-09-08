@@ -57,6 +57,12 @@ function createDb(): DatabaseSync {
       position INTEGER NOT NULL DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS palette_tags (
+      palette_id INTEGER NOT NULL REFERENCES palettes(id) ON DELETE CASCADE,
+      tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+      PRIMARY KEY (palette_id, tag_id)
+    );
+
     CREATE TABLE IF NOT EXISTS fonts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       family_name TEXT NOT NULL,

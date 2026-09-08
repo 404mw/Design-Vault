@@ -1,8 +1,8 @@
 # Palettes (`/palettes`)
 
 A library of saved color palettes. Each palette is a set of named, hex-valued colors with roles
-(background/surface/text/muted/accent/border), browsable as a grid, checkable for text/background
-contrast, and exportable as CSS custom properties.
+(`any`/background/surface/text/muted/accent/border) and optional free-form tags, browsable as a
+grid, checkable for text/background contrast, and exportable as CSS custom properties.
 
 ## Routes
 
@@ -31,11 +31,17 @@ Browse-first: the grid always renders every palette (`ORDER BY created_at DESC`)
 search narrows it, it never gates it (Constitution Rule 002). `dynamic = "force-dynamic"`.
 
 Palettes carry no user-facing name (see "Deviations" below), so search (`q`) instead matches
-against each palette's colors: any color's `name`, `hex`, or `role`, via `LIKE %q%` against
-`palette_colors` in an `EXISTS` subquery.
+against each palette's colors and its tags, via two `LIKE %q%`-driven `EXISTS` subqueries OR'd
+together: one over `palette_colors` (a color's `name`, `hex`, or `role`), the other over
+`palette_tags` joined to `tags` (a linked tag's `name`).
 
-Each grid card (`SpecimenPlate`) shows the palette's color count as its spec, and a custom `sample`:
-a horizontal strip of swatches (one flex segment per color, equal width) — or, once a palette has
+Search is client-driven and instant: typing debounces ~300ms before updating the URL's `q` query
+param, which this `force-dynamic` page re-renders against — no Enter needed (see
+`docs/features/screens.md` for the shared `IndexBar` mechanism). `/palettes` has no `FilterSelect`
+filter dropdowns, search only.
+
+Each grid card (`SpecimenPlate`) shows the palette's color count as its spec, its tags, and a custom
+`sample`: a horizontal strip of swatches (one flex segment per color, equal width) — or, once a palette has
 more than 3 colors, the per-swatch name label switches to a vertical (rotated -90°) orientation to
 keep it legible in a narrower segment. Each swatch renders its own hex as the background, with a
 pill-shaped label showing the color's name on top.
@@ -63,17 +69,32 @@ A single form with a repeatable list of color rows (`PaletteColorRows`, client c
 
 - **Pick** — a native `<input type="color">` swatch picker, kept in sync with the hex text field.
 - **Name** (required)
-- **Hex** (required) — pattern-validated client-side (`^#[0-9a-fA-F]{6}$`), full 6-digit only, no
-  3-digit shorthand.
-- **Role** (required) — one of `COLOR_ROLES` (`background`, `surface`, `text`, `muted`, `accent`,
-  `border`).
+- **Hex** (required) — the visible input holds only the 6 hex digits, with a static `#` shown
+  outside the editable box as a prefix; any `#` typed or pasted into the field is stripped
+  automatically. The full `#RRGGBB` value is tracked in a hidden `color_hex` field, which is what
+  actually gets submitted and is what's pattern-validated (`^#[0-9a-fA-F]{6}$`), full 6-digit only,
+  no 3-digit shorthand — this is a purely visual/input change, not a change to the submitted value
+  or its validation.
+- **Role** — one of `COLOR_ROLES` (`any`, `background`, `surface`, `text`, `muted`, `accent`,
+  `border`), defaulting to `any`. No longer marked required in the UI (the `Field` no longer shows
+  a required asterisk) — a role value is always present by default, so there's nothing to enforce.
+  `any` means "no particular role"; see "Deviations" below for what that means for contrast
+  checking.
 
 All rows share field names (`color_name`, `color_hex`, `color_role`) so the server action
 (`createPalette`, `src/app/palettes/new/actions.ts`) zips the parallel `FormData.getAll()` arrays
 back together by index. A row where every field is blank is treated as an untouched extra row and
 skipped; a row with only some fields filled throws a validation error naming the row. Hex is
 re-validated server-side against the same 6-digit pattern. At least 2 complete color rows are
-required, or the action throws. On success, redirects to `/palettes`.
+required, or the action throws.
+
+- **Tags** (optional) — same treatment as `/screens`' Tags field (see `docs/features/screens.md`):
+  comma-separated, lowercased, deduped, and upserted into the shared `tags` table via the same
+  `TagsInput` component and the same `PRESET_TAGS` suggestion list. `createPalette` links them into
+  `palette_tags` with the same insert-or-ignore-then-link logic `createScreen` uses for
+  `ui_screen_tags`.
+
+On success, redirects to `/palettes`.
 
 ## Detail view (`/palettes/[id]`)
 
@@ -83,6 +104,8 @@ Shared content component `PaletteDetail` (`src/app/palettes/[id]/PaletteDetail.t
   route, and a delete action.
 - **Swatches** — every color as a full-size `CopyHex` card (image, name, hex, role); clicking
   copies the hex to the clipboard.
+- **Tags** (only if any) — pill list, same convention as `/screens`' detail view. Shown between
+  Swatches and Contrast check.
 - **Contrast check** — every `text`-role color paired against every `background`/`surface`-role
   color, each pair's ratio computed via `contrastRatio` and shown with its AA (`Pass` / `Large
   only` / `Fail`) and AAA (`Pass` / `Fail`) result. If the palette has no `text` role or no
@@ -122,6 +145,16 @@ Constitution Rule 004:
 | `role` | TEXT NOT NULL | one of `COLOR_ROLES` |
 | `position` | INTEGER | display order within the palette |
 
+`palette_tags` table:
+
+| column | type | notes |
+|---|---|---|
+| `palette_id` | INTEGER | FK → `palettes.id`, `ON DELETE CASCADE`, part of composite PK |
+| `tag_id` | INTEGER | FK → `tags.id`, `ON DELETE CASCADE`, part of composite PK |
+
+Tags are many-to-many via `tags` (shared across the whole app, same table `/screens` uses) and this
+join table, cascade-deleting on either side.
+
 ## Deliberate deviations from generic CRUD
 
 - **Browse-first landing, not search-first.** Per Constitution Rule 002, the grid always shows
@@ -137,3 +170,11 @@ Constitution Rule 004:
   back to near-black/near-white when there are no sibling colors at all to pick from.
 - **Contrast checking is a first-class section of the detail view**, not a separate tool — every
   `text` × `background`/`surface` pair in the palette is checked automatically against WCAG AA/AAA.
+- **`any` is the default role, and a real "opt out of contrast checking" value, not just a
+  placeholder.** Contrast pairing keys off literal role equality (`role === "text"` for the text
+  group, `role === "background" || role === "surface"` for the background group), so a color left
+  as `any` simply doesn't join either group. A palette where every color is left as `any` isn't an
+  error — its Contrast check section just shows the "nothing to check here" message instead of a
+  table.
+- **Tags reuse the app-wide `tags` table**, the same one `/screens` writes to — a tag typed on
+  either form is visible as an existing/autocomplete option on the other.

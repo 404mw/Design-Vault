@@ -28,7 +28,7 @@ export default async function PalettesPage({
 
   // Palettes carry no user-facing name (removed from the form/display), so
   // search matches against what's actually visible instead: each color's
-  // name, hex, or role.
+  // name, hex, or role — or any tag attached to the palette.
   const palettes = (
     search
       ? db
@@ -39,13 +39,19 @@ export default async function PalettesPage({
                WHERE pc.palette_id = p.id
                  AND (pc.name LIKE ? OR pc.hex LIKE ? OR pc.role LIKE ?)
              )
+             OR EXISTS (
+               SELECT 1 FROM palette_tags pt
+               JOIN tags t ON t.id = pt.tag_id
+               WHERE pt.palette_id = p.id AND t.name LIKE ?
+             )
              ORDER BY created_at DESC`,
           )
-          .all(`%${search}%`, `%${search}%`, `%${search}%`)
+          .all(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`)
       : db.prepare("SELECT * FROM palettes ORDER BY created_at DESC").all()
   ) as PaletteRow[];
 
   const colorsByPalette = new Map<number, ColorRow[]>();
+  const tagsByPalette = new Map<number, string[]>();
   if (palettes.length > 0) {
     const allColors = db
       .prepare("SELECT * FROM palette_colors ORDER BY palette_id, position")
@@ -54,6 +60,19 @@ export default async function PalettesPage({
       const list = colorsByPalette.get(color.palette_id) ?? [];
       list.push(color);
       colorsByPalette.set(color.palette_id, list);
+    }
+
+    const tagRows = db
+      .prepare(
+        `SELECT pt.palette_id, t.name FROM palette_tags pt
+         JOIN tags t ON t.id = pt.tag_id
+         ORDER BY t.name`,
+      )
+      .all() as { palette_id: number; name: string }[];
+    for (const t of tagRows) {
+      const list = tagsByPalette.get(t.palette_id) ?? [];
+      list.push(t.name);
+      tagsByPalette.set(t.palette_id, list);
     }
   }
 
@@ -65,7 +84,7 @@ export default async function PalettesPage({
         </div>
         <IndexBar
           searchName="q"
-          searchPlaceholder="Search by color name, hex, or role…"
+          searchPlaceholder="Search by color name, hex, role, or tag…"
           defaultSearch={search}
         >
           <Link
@@ -92,6 +111,7 @@ export default async function PalettesPage({
                 key={palette.id}
                 href={`/palettes/${palette.id}`}
                 specs={[`${colors.length} color${colors.length === 1 ? "" : "s"}`]}
+                tags={tagsByPalette.get(palette.id)}
                 sample={
                   <div className="flex h-full w-full">
                     {colors.map((c) => (

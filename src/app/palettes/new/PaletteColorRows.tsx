@@ -70,18 +70,24 @@ export function PaletteColorRows() {
           </Field>
 
           <Field label="Hex" required>
-            <TextInput
-              name="color_hex"
-              value={row.hex}
-              onChange={(e) => updateRow(row.id, { hex: e.target.value })}
-              placeholder="#0b0e14"
-              pattern="^#[0-9a-fA-F]{6}$"
-              title="6-digit hex, e.g. #0b0e14"
-              required
-            />
+            <div className="flex w-full items-center border border-line bg-paper px-3 py-2 font-serif text-sm text-ink focus-within:border-accent">
+              <span className="text-ink-faint">#</span>
+              <input
+                value={row.hex.replace(/^#/, "")}
+                onChange={(e) =>
+                  updateRow(row.id, { hex: `#${e.target.value.replace(/#/g, "")}` })
+                }
+                placeholder="0b0e14"
+                pattern="^[0-9a-fA-F]{6}$"
+                title="6-digit hex, e.g. 0b0e14"
+                required
+                className="w-full bg-transparent outline-none placeholder:text-ink-faint"
+              />
+            </div>
+            <input type="hidden" name="color_hex" value={row.hex} readOnly />
           </Field>
 
-          <Field label="Role" required>
+          <Field label="Role">
             <Select
               name="color_role"
               value={row.role}

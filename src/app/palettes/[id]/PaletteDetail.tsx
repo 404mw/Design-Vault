@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { ConfirmButton } from "@/components/specimen";
+import { ConfirmButton, Pill } from "@/components/specimen";
 import { CopyHex } from "./CopyHex";
 import { deletePalette } from "./actions";
 import { aaResult, aaaResult, contrastRatio } from "@/lib/contrast";
@@ -15,6 +15,7 @@ type ColorRow = {
   role: string;
   position: number;
 };
+type TagRow = { name: string };
 
 /**
  * The palette detail content, shared verbatim between the standalone
@@ -32,6 +33,15 @@ export async function PaletteDetail({ id }: { id: string }) {
   const colors = db
     .prepare("SELECT * FROM palette_colors WHERE palette_id = ? ORDER BY position")
     .all(paletteId) as ColorRow[];
+
+  const tags = db
+    .prepare(
+      `SELECT t.name FROM tags t
+       JOIN palette_tags pt ON pt.tag_id = t.id
+       WHERE pt.palette_id = ?
+       ORDER BY t.name`,
+    )
+    .all(paletteId) as TagRow[];
 
   const textColors = colors.filter((c) => c.role === "text");
   const bgColors = colors.filter((c) => c.role === "background" || c.role === "surface");
@@ -80,6 +90,17 @@ export async function PaletteDetail({ id }: { id: string }) {
           ))}
         </div>
       </section>
+
+      {tags.length > 0 && (
+        <section className="mb-10">
+          <p className="catalog-label mb-3 text-2xs text-ink-soft">Tags</p>
+          <div className="flex flex-wrap gap-1.5">
+            {tags.map((t) => (
+              <Pill key={t.name}>{t.name}</Pill>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mb-10">
         <p className="catalog-label mb-3 text-2xs text-ink-soft">Contrast check</p>

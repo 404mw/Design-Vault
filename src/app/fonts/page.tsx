@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { IndexBar, PlateGrid, SpecimenPlate, EmptyPlate } from "@/components/specimen";
+import { IndexBar, FilterSelect, PlateGrid, SpecimenPlate, EmptyPlate } from "@/components/specimen";
+import { LICENCES } from "@/lib/constants";
 import { FontFace } from "./FontFace";
 
 export const dynamic = "force-dynamic";
@@ -19,22 +20,35 @@ type FontRow = {
 export default async function FontsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; licence?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, licence: licenceParam } = await searchParams;
   const query = (q ?? "").trim();
+  const licence =
+    licenceParam && (LICENCES as readonly string[]).includes(licenceParam) ? licenceParam : "";
 
-  // Browse-first: the grid always renders; search narrows it, it never
-  // gates it.
-  const rows = query
-    ? (db
-        .prepare(
-          `SELECT * FROM fonts
-           WHERE family_name LIKE ? OR foundry LIKE ?
-           ORDER BY id DESC`,
-        )
-        .all(`%${query}%`, `%${query}%`) as FontRow[])
-    : (db.prepare(`SELECT * FROM fonts ORDER BY id DESC`).all() as FontRow[]);
+  // Browse-first: the grid always renders; search and filters narrow it,
+  // they never gate it.
+  const conditions: string[] = [];
+  const params: string[] = [];
+
+  if (query) {
+    conditions.push("(family_name LIKE ? OR foundry LIKE ?)");
+    params.push(`%${query}%`, `%${query}%`);
+  }
+
+  if (licence) {
+    conditions.push("licence = ?");
+    params.push(licence);
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  const rows = db
+    .prepare(`SELECT * FROM fonts ${where} ORDER BY id DESC`)
+    .all(...params) as FontRow[];
+
+  const hasFilters = Boolean(query || licence);
 
   const variantCounts = new Map<number, number>();
   if (rows.length > 0) {
@@ -62,12 +76,14 @@ export default async function FontsPage({
         searchName="q"
         searchPlaceholder="Search by family or foundry…"
         defaultSearch={query}
-      />
+      >
+        <FilterSelect name="licence" label="Licence" options={LICENCES} defaultValue={licence} />
+      </IndexBar>
 
       <PlateGrid>
         {rows.length === 0 ? (
           <EmptyPlate>
-            {query ? `No fonts match "${query}"` : "No fonts saved yet"}
+            {hasFilters ? "No fonts match these filters." : "No fonts saved yet"}
           </EmptyPlate>
         ) : (
           rows.map((row) => {

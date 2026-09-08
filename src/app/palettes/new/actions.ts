@@ -54,6 +54,25 @@ export async function createPalette(formData: FormData): Promise<void> {
     throw new Error("A palette needs at least 2 complete colors (name, hex, and role each).");
   }
 
+  const tagsRaw = String(formData.get("tags") ?? "").trim();
+  const tagNames = Array.from(
+    new Set(
+      tagsRaw
+        .split(",")
+        .map((t) => t.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  );
+
+  const insertTag = db.prepare("INSERT OR IGNORE INTO tags (name) VALUES (?)");
+  const getTagId = db.prepare("SELECT id FROM tags WHERE name = ?");
+  const tagIds: number[] = [];
+  for (const tagName of tagNames) {
+    insertTag.run(tagName);
+    const row = getTagId.get(tagName) as { id: number } | undefined;
+    if (row) tagIds.push(row.id);
+  }
+
   const result = db.prepare("INSERT INTO palettes (name) VALUES (?)").run(name);
   const paletteId = result.lastInsertRowid;
 
@@ -63,6 +82,13 @@ export async function createPalette(formData: FormData): Promise<void> {
   complete.forEach((color, position) => {
     insertColor.run(paletteId, color.name, color.hex, color.role, position);
   });
+
+  const linkTag = db.prepare(
+    "INSERT OR IGNORE INTO palette_tags (palette_id, tag_id) VALUES (?, ?)",
+  );
+  for (const tagId of tagIds) {
+    linkTag.run(paletteId, tagId);
+  }
 
   redirect("/palettes");
 }

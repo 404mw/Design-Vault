@@ -32,6 +32,7 @@ export const VERDICTS = ["love", "hate"] as const;
 export type Verdict = (typeof VERDICTS)[number];
 
 export const COLOR_ROLES = [
+  "any",
   "background",
   "surface",
   "text",

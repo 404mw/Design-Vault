@@ -21,6 +21,8 @@
 
   --text-2xs: 0.6875rem;
   --text-3xs: 0.625rem;
+
+  --width-index-search: 220px;
 }
 
 @theme inline {
@@ -82,4 +84,8 @@ body {
 
 .stamp-void {
   color: var(--ink-faint);
+}
+
+.min-w-index-search {
+  min-width: var(--width-index-search);
 }

@@ -25,6 +25,15 @@ Each grid card (`SpecimenPlate`) shows the image or video (object-cover, top-ali
 `page_type` and `layout_pattern` as specs, its tags, and a verdict stamp. Clicking a card navigates
 to `/screens/[id]`.
 
+Search and the filter dropdowns are client-driven, via the shared `IndexBar`/`FilterSelect`
+components (`src/components/specimen/IndexBar.tsx`): typing in the search field debounces 300ms
+before updating the URL's `q` query param via `router.replace` (`scroll: false`), which this
+`force-dynamic` Server Component then re-renders against — no Enter or submit needed, and the
+`<form>`'s native submit is suppressed so it can't fire a duplicate navigation on top of the
+debounced one. Selecting a filter dropdown (`page_type`, `layout_pattern`, `verdict`) applies
+immediately, same mechanism, no debounce. `palettes` and `fonts` use the same shared components for
+their own search/filter bars; this is the reference explanation for all three.
+
 ## Add form (`/screens/new`)
 
 The fields and their behavior live in a shared component, `NewScreenForm`
