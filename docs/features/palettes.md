@@ -40,13 +40,34 @@ param, which this `force-dynamic` page re-renders against — no Enter needed (s
 `docs/features/screens.md` for the shared `IndexBar` mechanism). `/palettes` has no `FilterSelect`
 filter dropdowns, search only.
 
-Each grid card (`SpecimenPlate`) shows the palette's color count as its spec, its tags, and a custom
-`sample`: a horizontal strip of swatches (one flex segment per color, equal width) — or, once a palette has
-more than 3 colors, the per-swatch name label switches to a vertical (rotated -90°) orientation to
-keep it legible in a narrower segment. Each swatch renders its own hex as the background, with a
-pill-shaped label showing the color's name on top.
+`/palettes` uses a wider grid than the other three browse panels: `PlateGrid`'s `columns="wide"`
+variant (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`, capping at 3 columns) instead of the shared
+default 2/3/4/5-column grid `/screens`, `/fonts`, and `/components` still use; the `wide` variant
+also uses a larger `gap-6` between cards, instead of the shared default's `gap-4` — another
+palette-only divergence, alongside `columns="wide"` itself. Each grid card (`SpecimenPlate`) carries
+no spec (palettes are the one panel where `specs` is omitted — no color count or other caption is
+shown), shows its tags, and a taller `aspectClassName` (`aspect-palette-swatch`, a named CSS custom
+property resolving to `3 / 4`, instead of the shared default `aspect-media` at `4 / 3` every other
+panel uses) containing a custom `sample`: a vertical stack of full-width horizontal color bars, one
+per color, each taking equal height within the sample area. Each bar renders its own hex as the
+background, with a bold, larger pill-shaped label showing the color's name on top. The label's
+typography is another palette-only divergence: it uses `font-display` (Caslon Display, the same
+display serif as the page's own `<h1>`) at `text-4xl`/`font-black`, rather than the `catalog-label`
+convention (tracked-uppercase, `font-caption`, weight 500) used everywhere else in the app for specs,
+tags, and plate numbers — the label reads as a title rather than a caption stamp.
 
-### Swatch label contrast (pill/strip)
+Solid-color cards don't have the built-in visual texture that photo/video specimens elsewhere in the
+app do, so without help a palette card (especially the minimum 2-color case) can read as one
+undifferentiated block rather than distinct swatches, and can blend into neighboring cards in the
+grid. Two more palette-only additions address this: the flex column holding the stacked color bars
+has a `gap-1` between bars, so the card's own dark background shows through as a thin separator
+between adjacent bars; and `SpecimenPlate` takes an optional `plateBorderClassName` prop (default
+`"border-line"`, unchanged for `/screens`, `/fonts`, and `/components`) that `/palettes` sets to
+`"border-line-strong"`, giving palette cards a stronger border than the other three panels. Both are
+additive, palette-only divergences from the shared `SpecimenPlate`/`PlateGrid` defaults, in the same
+vein as `aspectClassName` and `columns="wide"` above.
+
+### Swatch label contrast (pill/bar)
 
 The label pill's background is picked by `pickPillColor(hex, siblingHexes)`
 (`src/lib/contrast.ts`): among the palette's *other* colors (siblings), it always picks whichever
@@ -55,7 +76,10 @@ requirement to clear first. It only falls back to `readableTextColor(hex)` (near
 near-white, whichever contrasts more) when there are literally no sibling colors to choose from,
 which can't currently happen since every palette requires at least 2 colors. The label's own text
 color is always the swatch's own hex — so the label visually "belongs" to its swatch (reads in that
-color) while sitting on a pill background borrowed from elsewhere in the same palette.
+color) while sitting on a pill background borrowed from elsewhere in the same palette. This logic is
+unchanged from the previous side-by-side layout; only the bar's orientation (full-width horizontal
+bars stacked vertically, rather than equal-width vertical segments in a row) and the label's
+typography (see "Browse grid" above) changed.
 
 ## Add form (`/palettes/new`)
 

@@ -20,20 +20,24 @@ export function SpecimenPlate({
   specs,
   tags,
   verdict,
+  aspectClassName = "aspect-media",
+  plateBorderClassName = "border-line",
 }: {
   href: string;
   sample: ReactNode;
   title?: string;
-  specs: string[];
+  specs?: string[];
   tags?: string[];
   verdict?: Verdict;
+  aspectClassName?: string;
+  plateBorderClassName?: string;
 }) {
   return (
     <Link
       href={href}
-      className="group block border border-line bg-paper-raised transition-colors hover:border-line-strong"
+      className={`group block border ${plateBorderClassName} bg-paper-raised transition-colors hover:border-line-strong`}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-paper-deep">
+      <div className={`relative overflow-hidden bg-paper-deep ${aspectClassName}`}>
         {sample}
         {verdict && (
           <span className="absolute right-1.5 top-1.5 rounded-full bg-paper-deep p-0.5">
@@ -44,9 +48,11 @@ export function SpecimenPlate({
 
       <div className="space-y-1.5 px-3 py-2.5">
         {title && <p className="truncate font-serif text-sm text-ink">{title}</p>}
-        <p className="catalog-label truncate text-3xs text-ink-soft">
-          {specs.join(" · ")}
-        </p>
+        {specs && specs.length > 0 && (
+          <p className="catalog-label truncate text-3xs text-ink-soft">
+            {specs.join(" · ")}
+          </p>
+        )}
         {tags && tags.length > 0 && (
           <div className="flex flex-wrap gap-1 pt-0.5">
             {tags.slice(0, 3).map((t) => (
@@ -64,9 +70,21 @@ export function SpecimenPlate({
   );
 }
 
-export function PlateGrid({ children }: { children: ReactNode }) {
+export function PlateGrid({
+  children,
+  columns = "default",
+}: {
+  children: ReactNode;
+  columns?: "default" | "wide";
+}) {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    <div
+      className={`grid ${
+        columns === "wide"
+          ? "gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+          : "gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+      }`}
+    >
       {children}
     </div>
   );

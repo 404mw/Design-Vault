@@ -23,6 +23,10 @@
   --text-3xs: 0.625rem;
 
   --width-index-search: 220px;
+  --border-width-nav-active: 1.5px;
+  --aspect-media: 4 / 3;
+  --aspect-palette-swatch: 3 / 4;
+  --max-h-modal: 85vh;
 }
 
 @theme inline {
@@ -88,4 +92,20 @@ body {
 
 .min-w-index-search {
   min-width: var(--width-index-search);
+}
+
+.border-b-nav-active {
+  border-bottom-width: var(--border-width-nav-active);
+}
+
+.aspect-media {
+  aspect-ratio: var(--aspect-media);
+}
+
+.aspect-palette-swatch {
+  aspect-ratio: var(--aspect-palette-swatch);
+}
+
+.max-h-modal {
+  max-height: var(--max-h-modal);
 }

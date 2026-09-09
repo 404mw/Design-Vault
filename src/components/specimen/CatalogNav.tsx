@@ -7,6 +7,7 @@ const VOLUMES = [
   { href: "/screens", label: "Screens", code: "VOL. I" },
   { href: "/palettes", label: "Palettes", code: "VOL. II" },
   { href: "/fonts", label: "Fonts", code: "VOL. III" },
+  { href: "/components", label: "Components", code: "VOL. IV" },
 ] as const;
 
 export function CatalogNav() {
@@ -38,7 +39,7 @@ export function CatalogNav() {
                 </span>
                 <span
                   className={`catalog-label text-2xs sm:text-xs ${
-                    active ? "border-b-[1.5px] border-accent" : ""
+                    active ? "border-b-nav-active border-accent" : ""
                   }`}
                 >
                   {v.label}

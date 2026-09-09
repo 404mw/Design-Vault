@@ -7,7 +7,7 @@ const UPLOAD_ROOT = path.join(process.cwd(), "public", "uploads");
 /** Saves a File/Blob under public/uploads/<subdir>/ and returns its public URL path. */
 export async function saveUpload(
   file: File,
-  subdir: "screens" | "fonts",
+  subdir: "screens" | "fonts" | "components",
 ): Promise<string> {
   const dir = path.join(UPLOAD_ROOT, subdir);
   await fs.mkdir(dir, { recursive: true });
@@ -44,7 +44,7 @@ const EXT_BY_CONTENT_TYPE: Record<string, string> = {
  */
 export async function saveUploadFromUrl(
   url: string,
-  subdir: "screens" | "fonts",
+  subdir: "screens" | "fonts" | "components",
 ): Promise<string> {
   const res = await fetch(url);
   if (!res.ok) {

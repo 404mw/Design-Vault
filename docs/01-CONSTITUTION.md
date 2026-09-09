@@ -17,9 +17,9 @@ hold a literal only as a byte-for-byte mirror of a token, commented with that to
 
 ## Rule 002 — Browse-first landing, optional "why"
 
-Every route (`/screens`, `/palettes`, `/fonts`) shows its grid by default; search/filters narrow
-it, never gate it. The "why" field on a UI screen is optional, not required. Both are deliberate —
-don't silently revert either.
+Every route (`/screens`, `/palettes`, `/fonts`, `/components`) shows its grid by default;
+search/filters narrow it, never gate it. The "why" field on a UI screen is optional, not required.
+Both are deliberate — don't silently revert either.
 
 ## Rule 003 — Planning authority
 

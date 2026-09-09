@@ -53,6 +53,9 @@ export async function createPalette(formData: FormData): Promise<void> {
   if (complete.length < 2) {
     throw new Error("A palette needs at least 2 complete colors (name, hex, and role each).");
   }
+  if (complete.length > 8) {
+    throw new Error("A palette can have at most 8 colors.");
+  }
 
   const tagsRaw = String(formData.get("tags") ?? "").trim();
   const tagNames = Array.from(

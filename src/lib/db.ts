@@ -84,8 +84,27 @@ function createDb(): DatabaseSync {
       position INTEGER NOT NULL DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS ui_components (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      component_type TEXT NOT NULL,
+      media_type TEXT NOT NULL CHECK (media_type IN ('image','video')),
+      file_path TEXT NOT NULL,
+      snippet TEXT,
+      snippet_lang TEXT,
+      source_url TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS ui_component_tags (
+      component_id INTEGER NOT NULL REFERENCES ui_components(id) ON DELETE CASCADE,
+      tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+      PRIMARY KEY (component_id, tag_id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_ui_screens_page_type ON ui_screens(page_type);
     CREATE INDEX IF NOT EXISTS idx_ui_screens_verdict ON ui_screens(verdict);
+    CREATE INDEX IF NOT EXISTS idx_ui_components_component_type ON ui_components(component_type);
   `);
 
   return db;

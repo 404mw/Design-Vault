@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.23",
     "fontkit": "^2.0.4",
     "libarchive.js": "2.0.2",
     "next": "16.3.0",

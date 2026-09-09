@@ -34,7 +34,7 @@ export function PaletteColorRows() {
   }
 
   function addRow() {
-    setRows((current) => [...current, makeRow()]);
+    setRows((current) => (current.length >= 8 ? current : [...current, makeRow()]));
   }
 
   function removeRow(id: number) {
@@ -118,7 +118,8 @@ export function PaletteColorRows() {
       <button
         type="button"
         onClick={addRow}
-        className="catalog-label self-start border border-line px-4 py-2 text-2xs text-ink-soft transition-colors hover:border-accent hover:text-accent"
+        disabled={rows.length >= 8}
+        className="catalog-label self-start border border-line px-4 py-2 text-2xs text-ink-soft transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-line disabled:hover:text-ink-soft"
       >
         + Add color
       </button>

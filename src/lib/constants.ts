@@ -31,6 +31,27 @@ export type LayoutPattern = (typeof LAYOUT_PATTERNS)[number];
 export const VERDICTS = ["love", "hate"] as const;
 export type Verdict = (typeof VERDICTS)[number];
 
+export const COMPONENT_TYPES = [
+  "button",
+  "card",
+  "nav",
+  "form",
+  "modal",
+  "table",
+  "input",
+  "badge",
+  "tooltip",
+  "dropdown",
+  "pagination",
+  "tabs",
+  "accordion",
+  "toast",
+  "loader",
+  "avatar",
+  "other",
+] as const;
+export type ComponentType = (typeof COMPONENT_TYPES)[number];
+
 export const COLOR_ROLES = [
   "any",
   "background",

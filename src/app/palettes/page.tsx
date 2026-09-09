@@ -96,7 +96,7 @@ export default async function PalettesPage({
         </IndexBar>
       </div>
 
-      <PlateGrid>
+      <PlateGrid columns="wide">
         {palettes.length === 0 ? (
           <EmptyPlate>
             {search ? `No palettes match "${search}".` : "No palettes yet — add your first one."}
@@ -104,16 +104,16 @@ export default async function PalettesPage({
         ) : (
           palettes.map((palette) => {
             const colors = colorsByPalette.get(palette.id) ?? [];
-            const narrow = colors.length > 3;
             const siblingHexes = colors.map((c) => c.hex);
             return (
               <SpecimenPlate
                 key={palette.id}
                 href={`/palettes/${palette.id}`}
-                specs={[`${colors.length} color${colors.length === 1 ? "" : "s"}`]}
+                aspectClassName="aspect-palette-swatch"
+                plateBorderClassName="border-line-strong"
                 tags={tagsByPalette.get(palette.id)}
                 sample={
-                  <div className="flex h-full w-full">
+                  <div className="flex h-full w-full flex-col gap-1">
                     {colors.map((c) => (
                       <span
                         key={c.id}
@@ -121,9 +121,7 @@ export default async function PalettesPage({
                         style={{ backgroundColor: c.hex }}
                       >
                         <span
-                          className={`catalog-label rounded-full px-2 py-0.5 text-center text-3xs leading-tight ${
-                            narrow ? "-rotate-90 whitespace-nowrap" : "line-clamp-2 break-words"
-                          }`}
+                          className="font-display max-w-full truncate rounded-full px-6 py-1.5 text-center text-4xl font-black leading-tight"
                           style={{ backgroundColor: pickPillColor(c.hex, siblingHexes), color: c.hex }}
                         >
                           {c.name}

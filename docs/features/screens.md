@@ -84,12 +84,12 @@ modal route described below — same data, same markup, just wrapped differently
 
 ## Modal-on-click vs full-page-on-direct-load
 
-All three route trees (`screens`, `palettes`, `fonts`) share one pattern for showing a detail view
-as an in-place modal when reached by clicking a grid card, while still rendering a real full page
-at the same URL when loaded directly (hard refresh, external link, or opening the URL in a new
-tab). This is implemented once per route tree using Next.js App Router parallel routes +
-intercepting routes; `screens` is the reference implementation, `palettes` and `fonts` mirror it
-exactly.
+All four route trees (`screens`, `palettes`, `fonts`, `components`) share one pattern for showing a
+detail view as an in-place modal when reached by clicking a grid card, while still rendering a real
+full page at the same URL when loaded directly (hard refresh, external link, or opening the URL in
+a new tab). This is implemented once per route tree using Next.js App Router parallel routes +
+intercepting routes; `screens` is the reference implementation, `palettes`, `fonts`, and `components`
+mirror it exactly.
 
 Structure under `src/app/screens/`:
 
@@ -131,10 +131,17 @@ sibling for a single path segment; the `id === "new"` branch inside `(.)[id]/pag
 that actually works, and turns what was a bug into an intentional modal-on-click UX for the add
 forms too, matching how detail rows already behaved.
 
-`Modal` itself (`src/components/specimen/Modal.tsx`) is a client component shared by all three
+`Modal` itself (`src/components/specimen/Modal.tsx`) is a client component shared by all four
 route trees: closing always calls `router.back()` — never a hardcoded route — so the grid's
-current search/filter query params survive. It closes on Escape, on a backdrop click (checked by
-identity so bubbled clicks from the panel itself don't trigger it), and via a visible close button.
+current search/filter query params survive. It's built on `@radix-ui/react-dialog`
+(`Dialog.Root`/`Portal`/`Overlay`/`Content`/`Close`, always rendered `open`, with `onOpenChange`
+driving the `router.back()` call) rather than hand-rolled Escape-key, backdrop-click, and
+body-scroll-lock logic. Radix was chosen over shadcn's generated Dialog specifically because
+shadcn's version assumes its own `--background`/`--foreground` CSS-variable convention, which would
+conflict with this app's existing token system in `globals.css`; raw Radix is unstyled and is wired
+directly to the existing tokens with no visual change. As a result, closing on Escape, on a
+backdrop click, and via a visible close button, along with focus trapping, focus restore on close,
+and ARIA dialog semantics, are all handled by Radix rather than by this component.
 
 ## Data shape
 
