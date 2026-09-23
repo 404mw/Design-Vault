@@ -2,7 +2,9 @@
 
 A library of saved color palettes. Each palette is a set of named, hex-valued colors with roles
 (`any`/background/surface/text/muted/accent/border) and optional free-form tags, browsable as a
-grid, checkable for text/background contrast, and exportable as CSS custom properties.
+grid, checkable for text/background contrast, and exportable as CSS custom properties. A palette is
+created either directly through the add form, or automatically from a screen's colours when saving
+or editing a screen on `/screens` (see `docs/features/screens.md`).
 
 ## Routes
 
@@ -109,8 +111,10 @@ All rows share field names (`color_name`, `color_hex`, `color_role`) so the serv
 (`createPalette`, `src/app/palettes/new/actions.ts`) zips the parallel `FormData.getAll()` arrays
 back together by index. A row where every field is blank is treated as an untouched extra row and
 skipped; a row with only some fields filled throws a validation error naming the row. Hex is
-re-validated server-side against the same 6-digit pattern. At least 2 complete color rows are
-required, or the action throws.
+re-validated server-side against the same 6-digit pattern (`HEX_COLOUR_RE`, `src/lib/palettes.ts`).
+At least 2 complete color rows are required, and at most `MAX_PALETTE_COLOURS` (8,
+`src/lib/constants.ts`) — the same cap the screen add/edit form's colour picker enforces (see
+`docs/features/screens.md`) — or the action throws.
 
 - **Tags** (optional) — same treatment as `/screens`' Tags field (see `docs/features/screens.md`):
   comma-separated, lowercased, deduped, and upserted into the shared `tags` table via the same
@@ -118,14 +122,27 @@ required, or the action throws.
   `palette_tags` with the same insert-or-ignore-then-link logic `createScreen` uses for
   `ui_screen_tags`.
 
-On success, redirects to `/palettes`.
+Before redirecting, `createPalette` calls `revalidatePath` for `/palettes` so the grid reflects the
+new palette immediately, without a hard refresh — see "Refresh after create, update, or delete" in
+`docs/features/screens.md` for why this is needed. On success, redirects to `/palettes`.
+
+A palette can also be created without going through this form at all: saving or editing a screen on
+`/screens` with "Save colours as palette" checked creates one automatically, via
+`createPaletteFromHexes` (`src/lib/palettes.ts`) — the same module `createPalette` shares
+`HEX_COLOUR_RE` and `generatePaletteName` with, plus `parseSavePaletteRequest`, which validates the
+screen form's colour submission (count and hex format) the same way `createPalette` validates its
+own rows. An auto-created palette has no name entered by anyone (same internal generated `name`
+every palette gets), each colour's `name` is set to its own hex rather than a chosen name, every
+colour's `role` is `any`, and its `source_screen_id` points back at the screen it came from — see
+`docs/features/screens.md`.
 
 ## Detail view (`/palettes/[id]`)
 
 Shared content component `PaletteDetail` (`src/app/palettes/[id]/PaletteDetail.tsx`) renders:
 
 - A heading (`{n}-Color Palette`), plate number, an **Export tokens (.css)** link to the export
-  route, and a delete action.
+  route, a "From screen #N" link to `/screens/[id]` when `source_screen_id` is set, and a delete
+  action.
 - **Swatches** — every color as a full-size `CopyHex` card (image, name, hex, role); clicking
   copies the hex to the clipboard.
 - **Tags** (only if any) — pill list, same convention as `/screens`' detail view. Shown between
@@ -134,10 +151,18 @@ Shared content component `PaletteDetail` (`src/app/palettes/[id]/PaletteDetail.t
   color, each pair's ratio computed via `contrastRatio` and shown with its AA (`Pass` / `Large
   only` / `Fail`) and AAA (`Pass` / `Fail`) result. If the palette has no `text` role or no
   `background`/`surface` role, this section shows an explanatory message instead of an empty table.
+  The table's minimum width comes from the `--width-contrast-table` CSS custom property in
+  `src/app/globals.css` (via the `.min-w-contrast-table` utility class), so it doesn't compress
+  illegibly on narrow viewports.
 
 Deleting (`deletePalette`, `src/app/palettes/[id]/actions.ts`) is a hard `DELETE` on the `palettes`
 row; `palette_colors` rows cascade-delete via the schema's `ON DELETE CASCADE` (foreign keys are
-enabled globally in `src/lib/db.ts`). Confirmed via `ConfirmButton`, then redirects to `/palettes`.
+enabled globally in `src/lib/db.ts`). Deleting a palette does not touch the screen it was created
+from, if any — the relationship only cascades the other way (see "Data shape" below). Confirmed via
+`ConfirmButton`, then calls `revalidatePath` for `/palettes` and, if the palette had a
+`source_screen_id`, that screen's `/screens/[id]` too (so its "From this screen" palette link
+disappears from the cached detail page), before redirecting to `/palettes` — see "Refresh after
+create, update, or delete" in `docs/features/screens.md`.
 
 ## Export route (`GET /api/palettes/[id]/export`)
 
@@ -156,7 +181,17 @@ Constitution Rule 004:
 |---|---|---|
 | `id` | INTEGER PK | |
 | `name` | TEXT NOT NULL | internal-only, never shown in the UI — see "Deviations" |
+| `source_screen_id` | INTEGER, nullable | FK → `ui_screens.id`, `ON DELETE SET NULL` — set when this palette was auto-created from a screen's colours; `NULL` for palettes created directly through the add form, and also once the source screen is deleted |
 | `created_at` | TEXT | default `datetime('now')` |
+
+`source_screen_id` was added via a startup migration in `src/lib/db.ts`: on every connection open, a
+`PRAGMA table_info(palettes)` check looks for the column, and only runs `ALTER TABLE ... ADD COLUMN`
+if it's missing — so existing databases pick up the column without a manual migration step. Because
+Next's build (and dev) can open several connections to the same file concurrently, two connections
+can both see the column missing and both attempt the `ALTER TABLE`; the loser's "duplicate column
+name" error is caught and ignored (anything else re-throws), and the same connection also sets
+`PRAGMA busy_timeout = 5000` so a concurrent writer waits instead of failing immediately with
+"database is locked".
 
 `palette_colors` table:
 
@@ -202,3 +237,14 @@ join table, cascade-deleting on either side.
   table.
 - **Tags reuse the app-wide `tags` table**, the same one `/screens` writes to — a tag typed on
   either form is visible as an existing/autocomplete option on the other.
+- **A palette doesn't have to come from the add form.** Saving or editing a screen with "Save
+  colours as palette" checked creates one automatically, linked back to that screen via
+  `source_screen_id`. Deleting the screen later doesn't delete the palette — the link is just
+  cleared (`ON DELETE SET NULL`). An auto-created palette's colours have their `name` set to their
+  own hex (nothing else was ever entered for them) and `role` set to `any`.
+- **A palette can have at most `MAX_PALETTE_COLOURS` (8) colours**, a shared invariant defined once
+  in `src/lib/constants.ts` and enforced on both paths a palette can be created from: `createPalette`
+  rejects a manual submission with more than 8 complete color rows, and `parseSavePaletteRequest`
+  (`src/lib/palettes.ts`) does the same for the screen-form path, where the client-side `ColourPicker`
+  also proactively trims auto-extraction to the cap and disables further picking once at it (see
+  `docs/features/screens.md`).

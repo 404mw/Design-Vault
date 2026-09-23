@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { ConfirmButton, Pill } from "@/components/specimen";
 import { db } from "@/lib/db";
+import { deleteUpload } from "@/lib/uploads";
 import type { MediaType } from "@/lib/constants";
 import { CopyButton } from "./CopyButton";
 
@@ -35,6 +37,8 @@ export async function ComponentDetail({ id }: { id: string }) {
 
   if (!component) notFound();
 
+  const filePath = component.file_path;
+
   const tags = db
     .prepare(
       `SELECT t.name FROM tags t
@@ -49,6 +53,8 @@ export async function ComponentDetail({ id }: { id: string }) {
   async function deleteComponent() {
     "use server";
     db.prepare("DELETE FROM ui_components WHERE id = ?").run(componentId);
+    await deleteUpload(filePath, "components");
+    revalidatePath("/components");
     redirect("/components");
   }
 

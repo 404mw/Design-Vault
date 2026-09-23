@@ -2,6 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+export type SpecimenPreview = {
+  mediaType: "image" | "video";
+  /**
+   * A src usable for canvas colour extraction without CORS-tainting it:
+   * either the local blob:/relative-path preview (same-origin), or a
+   * same-origin proxy URL for a dragged remote URL. Null for video.
+   */
+  extractSrc: string | null;
+};
+
 /**
  * Captures a specimen via three free paths: a manual file
  * picker, paste-from-clipboard, and drag-and-drop. A browser-tab drag of an
@@ -11,15 +21,43 @@ import { useCallback, useEffect, useRef, useState } from "react";
  */
 export function UploadDropzone({
   onUrlCaptured,
+  onSpecimenChange,
+  existingPreview,
 }: {
   onUrlCaptured?: (url: string) => void;
+  /** Fired whenever the current preview's media type/extraction src changes, including on mount. */
+  onSpecimenChange?: (preview: SpecimenPreview | null) => void;
+  /** Edit mode only: the screen's current media, shown by default until replaced. */
+  existingPreview?: { url: string; mediaType: "image" | "video" } | null;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewKind, setPreviewKind] = useState<"image" | "video" | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(existingPreview?.url ?? null);
+  const [previewKind, setPreviewKind] = useState<"image" | "video" | null>(
+    existingPreview?.mediaType ?? null,
+  );
   const [draggedUrl, setDraggedUrl] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const objectUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!onSpecimenChange) return;
+    if (!previewUrl || !previewKind) {
+      onSpecimenChange(null);
+      return;
+    }
+    if (previewKind === "video") {
+      onSpecimenChange({ mediaType: "video", extractSrc: null });
+      return;
+    }
+    // A dragged remote URL would CORS-taint a canvas read directly — proxy
+    // it same-origin. A captured file (blob: object URL) or the existing
+    // same-origin media path both read fine as-is.
+    const extractSrc = draggedUrl
+      ? `/api/image-proxy?url=${encodeURIComponent(draggedUrl)}`
+      : previewUrl;
+    onSpecimenChange({ mediaType: "image", extractSrc });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewUrl, previewKind, draggedUrl]);
 
   useEffect(() => {
     return () => {

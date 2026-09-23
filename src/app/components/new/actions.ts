@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { saveUpload, saveUploadFromUrl, mediaTypeFromFilename } from "@/lib/uploads";
 import { COMPONENT_TYPES, type ComponentType } from "@/lib/constants";
@@ -116,5 +117,6 @@ export async function createComponent(
     linkTag.run(componentId, tagId);
   }
 
+  revalidatePath("/components");
   redirect("/components");
 }

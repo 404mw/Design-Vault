@@ -64,7 +64,15 @@ export function SubmitButton({
 }
 
 /** Required verdict selector — rendered as two stamp-styled radio choices, never a dropdown, so the required judgment stays visible rather than hidden in a select. */
-export function VerdictField({ name, required = true }: { name: string; required?: boolean }) {
+export function VerdictField({
+  name,
+  required = true,
+  defaultValue,
+}: {
+  name: string;
+  required?: boolean;
+  defaultValue?: string;
+}) {
   return (
     <div className="flex gap-3">
       {(["love", "hate"] as const).map((v) => (
@@ -72,7 +80,14 @@ export function VerdictField({ name, required = true }: { name: string; required
           key={v}
           className="catalog-label flex flex-1 cursor-pointer items-center justify-center gap-2 border border-line px-4 py-3 text-2xs text-ink-soft has-[:checked]:border-accent has-[:checked]:text-ink"
         >
-          <input type="radio" name={name} value={v} required={required} className="sr-only" />
+          <input
+            type="radio"
+            name={name}
+            value={v}
+            required={required}
+            defaultChecked={defaultValue === v}
+            className="sr-only"
+          />
           {v === "love" ? "Love — keep" : "Hate — reject"}
         </label>
       ))}

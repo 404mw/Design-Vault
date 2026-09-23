@@ -15,6 +15,11 @@ declare global {
 function createDb(): DatabaseSync {
   const db = new DatabaseSync(DB_PATH);
   db.exec("PRAGMA foreign_keys = ON;");
+  // Next's build (and multiple dev requests) can open several connections
+  // to the same file concurrently — without this, one connection's write
+  // (e.g. the source_screen_id migration below) can make a concurrent one
+  // fail immediately with "database is locked" instead of just waiting.
+  db.exec("PRAGMA busy_timeout = 5000;");
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS ui_screens (
@@ -45,6 +50,7 @@ function createDb(): DatabaseSync {
     CREATE TABLE IF NOT EXISTS palettes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
+      source_screen_id INTEGER REFERENCES ui_screens(id) ON DELETE SET NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -106,6 +112,25 @@ function createDb(): DatabaseSync {
     CREATE INDEX IF NOT EXISTS idx_ui_screens_verdict ON ui_screens(verdict);
     CREATE INDEX IF NOT EXISTS idx_ui_components_component_type ON ui_components(component_type);
   `);
+
+  // `CREATE TABLE IF NOT EXISTS` above only covers brand-new databases —
+  // a pre-existing vault.db from before source_screen_id existed needs it
+  // added by hand.
+  const paletteColumns = db.prepare("PRAGMA table_info(palettes)").all() as { name: string }[];
+  if (!paletteColumns.some((c) => c.name === "source_screen_id")) {
+    try {
+      db.exec(
+        "ALTER TABLE palettes ADD COLUMN source_screen_id INTEGER REFERENCES ui_screens(id) ON DELETE SET NULL;",
+      );
+    } catch (err) {
+      // Concurrent connections (multiple build workers, or dev + a request)
+      // can both see the column missing and both try to add it — the loser
+      // hits "duplicate column name", which just means the winner already
+      // did the job. Anything else is a real failure.
+      const message = err instanceof Error ? err.message : String(err);
+      if (!/duplicate column name/i.test(message)) throw err;
+    }
+  }
 
   return db;
 }

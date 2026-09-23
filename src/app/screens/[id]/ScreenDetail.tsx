@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { ConfirmButton, Pill, VerdictStamp } from "@/components/specimen";
 import { db } from "@/lib/db";
+import { deleteUpload } from "@/lib/uploads";
 import type { MediaType, Verdict } from "@/lib/constants";
 import { CopyButton } from "./CopyButton";
 
@@ -37,6 +39,8 @@ export async function ScreenDetail({ id }: { id: string }) {
 
   if (!screen) notFound();
 
+  const filePath = screen.file_path;
+
   const tags = db
     .prepare(
       `SELECT t.name FROM tags t
@@ -46,11 +50,26 @@ export async function ScreenDetail({ id }: { id: string }) {
     )
     .all(screenId) as TagRow[];
 
+  // Palettes created from this screen's colour picker link back via
+  // source_screen_id — surface that link both ways.
+  const linkedPalettes = db
+    .prepare("SELECT id FROM palettes WHERE source_screen_id = ? ORDER BY id")
+    .all(screenId) as { id: number }[];
+
   // The library must stay curated, not just large — deletion is a real
   // requirement here, not a nice-to-have.
   async function deleteScreen() {
     "use server";
+    // Queried before the delete: the DB nulls source_screen_id on delete
+    // (ON DELETE SET NULL), and the linked palette's "From screen #N" link
+    // needs to disappear from its cached detail page too.
+    const palettes = db
+      .prepare("SELECT id FROM palettes WHERE source_screen_id = ?")
+      .all(screenId) as { id: number }[];
     db.prepare("DELETE FROM ui_screens WHERE id = ?").run(screenId);
+    await deleteUpload(filePath, "screens");
+    revalidatePath("/screens");
+    for (const p of palettes) revalidatePath(`/palettes/${p.id}`);
     redirect("/screens");
   }
 
@@ -109,6 +128,25 @@ export async function ScreenDetail({ id }: { id: string }) {
         </div>
       )}
 
+      {linkedPalettes.length > 0 && (
+        <div>
+          <p className="catalog-label text-3xs text-ink-faint">
+            {linkedPalettes.length > 1 ? "Palettes" : "Palette"}
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {linkedPalettes.map((p) => (
+              <Link
+                key={p.id}
+                href={`/palettes/${p.id}`}
+                className="font-serif text-sm text-accent underline underline-offset-2"
+              >
+                Palette #{p.id}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {screen.source_url && (
         <div>
           <p className="catalog-label text-3xs text-ink-faint">Source</p>
@@ -141,14 +179,22 @@ export async function ScreenDetail({ id }: { id: string }) {
         <Link href="/screens" className="catalog-label text-2xs text-ink-faint hover:text-ink">
           ← Back to index
         </Link>
-        <form action={deleteScreen}>
-          <ConfirmButton
-            confirmMessage="Delete this specimen? This can't be undone."
-            className="catalog-label border border-accent px-4 py-2 text-2xs text-accent transition-colors hover:bg-accent hover:text-paper"
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/screens/${screen.id}/edit`}
+            className="catalog-label border border-line px-4 py-2 text-2xs text-ink-soft transition-colors hover:border-accent hover:text-accent"
           >
-            Delete specimen
-          </ConfirmButton>
-        </form>
+            Edit
+          </Link>
+          <form action={deleteScreen}>
+            <ConfirmButton
+              confirmMessage="Delete this specimen? This can't be undone."
+              className="catalog-label border border-accent px-4 py-2 text-2xs text-accent transition-colors hover:bg-accent hover:text-paper"
+            >
+              Delete specimen
+            </ConfirmButton>
+          </form>
+        </div>
       </div>
     </div>
   );

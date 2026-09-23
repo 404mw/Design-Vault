@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { db } from "@/lib/db";
@@ -119,5 +120,6 @@ export async function createFont(formData: FormData) {
     fail("Couldn't save this font — something went wrong writing the files or the database record. Try again.");
   }
 
+  revalidatePath("/fonts");
   redirect("/fonts");
 }

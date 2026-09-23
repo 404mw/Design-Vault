@@ -62,7 +62,10 @@ Fields:
   `/palettes` (see `docs/features/screens.md`), writing through the same shared `tags` table.
 
 All fields are re-validated server-side in `createComponent`
-(`src/app/components/new/actions.ts`). On success, redirects to `/components`.
+(`src/app/components/new/actions.ts`). Before redirecting, it calls `revalidatePath` for
+`/components` so the grid reflects the new component immediately, without a hard refresh — see
+"Refresh after create, update, or delete" in `docs/features/screens.md` for why this is needed. On
+success, redirects to `/components`.
 
 ## Detail view (`/components/[id]`)
 
@@ -70,9 +73,16 @@ Shared content component `ComponentDetail` (`src/app/components/[id]/ComponentDe
 renders, in order: name as heading + plate number, the media, the component type, tags (only if
 any), link (only if set), source code with copy-to-clipboard (only if set), and a delete action.
 
-Deleting (`deleteComponent`) is a hard, immediate `DELETE` with no soft-delete/archive — same
-"actively curated, not just accumulated" rationale as `/screens`. Confirmed via `ConfirmButton`,
-then redirects to `/components`.
+Deleting (`deleteComponent`) is a hard, immediate delete: removes the `ui_components` row, then
+removes its media file from disk via the shared `deleteUpload` helper (`src/lib/uploads.ts`,
+`deleteUpload(filePath, "components")`) — no soft-delete/archive, same "actively curated, not just
+accumulated" rationale as `/screens`. `deleteUpload` only unlinks a path under
+`public/uploads/components/` and silently ignores an already-missing file; it's the same helper
+`deleteScreen`/`updateScreen` use (see `docs/features/screens.md`) — fonts have long done the
+equivalent themselves (see `docs/features/fonts.md`), and now all three media-owning routes clean up
+the same way. Confirmed via `ConfirmButton`, then calls `revalidatePath` for `/components` before
+redirecting to `/components` — see "Refresh after create, update, or delete" in
+`docs/features/screens.md`.
 
 ## Data shape
 
@@ -111,3 +121,6 @@ the three forms is visible as an existing/autocomplete option on the others.
   type and layout pattern are — so it doesn't rot into inconsistent near-duplicates the way free
   tags could.
 - **Hard delete, no archive.** Same rationale as `/screens`.
+- **No orphaned files on delete.** Deleting a component removes its media file from disk, not just
+  the `ui_components` row, via the shared `deleteUpload` helper — the same guarantee screens and
+  fonts provide (see `docs/features/screens.md`, `docs/features/fonts.md`).

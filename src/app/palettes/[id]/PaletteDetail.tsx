@@ -6,7 +6,12 @@ import { CopyHex } from "./CopyHex";
 import { deletePalette } from "./actions";
 import { aaResult, aaaResult, contrastRatio } from "@/lib/contrast";
 
-type PaletteRow = { id: number; name: string; created_at: string };
+type PaletteRow = {
+  id: number;
+  name: string;
+  created_at: string;
+  source_screen_id: number | null;
+};
 type ColorRow = {
   id: number;
   palette_id: number;
@@ -29,6 +34,15 @@ export async function PaletteDetail({ id }: { id: string }) {
     | PaletteRow
     | undefined;
   if (!palette) notFound();
+
+  // Screens can create a companion palette from their extracted/picked
+  // colours (see src/lib/palettes.ts) — if this one came from a screen that
+  // still exists, link back to it.
+  const sourceScreen = palette.source_screen_id
+    ? (db.prepare("SELECT id FROM ui_screens WHERE id = ?").get(palette.source_screen_id) as
+        | { id: number }
+        | undefined)
+    : undefined;
 
   const colors = db
     .prepare("SELECT * FROM palette_colors WHERE palette_id = ? ORDER BY position")
@@ -82,6 +96,17 @@ export async function PaletteDetail({ id }: { id: string }) {
         </div>
       </div>
 
+      {sourceScreen && (
+        <p className="mb-10">
+          <Link
+            href={`/screens/${sourceScreen.id}`}
+            className="catalog-label text-2xs text-ink-soft hover:text-accent"
+          >
+            From screen #{sourceScreen.id} →
+          </Link>
+        </p>
+      )}
+
       <section className="mb-10">
         <p className="catalog-label mb-3 text-2xs text-ink-soft">Swatches</p>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
@@ -113,7 +138,7 @@ export async function PaletteDetail({ id }: { id: string }) {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] border-collapse text-sm">
+            <table className="min-w-contrast-table w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-line-strong text-left">
                   <th className="catalog-label py-2 pr-3 text-3xs text-ink-faint">Text</th>

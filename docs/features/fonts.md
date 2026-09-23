@@ -139,6 +139,10 @@ Saving is self-cleaning on failure: file writes and the two DB inserts (`fonts`,
 file already written for that submission is unlinked before routing through the `?error=` redirect.
 No file is left on disk without a matching row, on a failed save any more than on a delete.
 
+Before redirecting on success, `createFont` calls `revalidatePath` for `/fonts` so the grid reflects
+the new font immediately, without a hard refresh — see "Refresh after create, update, or delete" in
+`docs/features/screens.md` for why this is needed.
+
 ### Vendored archive-reader assets (`public/libarchive/`)
 
 `public/libarchive/` holds `libarchive.js`'s prebuilt `worker-bundle.js` and `libarchive.wasm`, plus
@@ -176,8 +180,9 @@ Shared content component `FontDetail` (`src/app/fonts/[id]/FontDetail.tsx`) rend
 Deleting (`deleteFont`, an inline Server Action inside `FontDetail`) is a hard, immediate delete:
 removes the `fonts` row (cascading `font_files` via `ON DELETE CASCADE`) and then removes every
 variant's file from disk (`public/uploads/fonts/`), including the primary file and all
-`font_files` entries, via `fs.rm` with `force: true`. Confirmed via `ConfirmButton`, then redirects
-to `/fonts`.
+`font_files` entries, via `fs.rm` with `force: true`. Confirmed via `ConfirmButton`, then calls
+`revalidatePath` for `/fonts` before redirecting to `/fonts` — see "Refresh after create, update, or
+delete" in `docs/features/screens.md`.
 
 ## Data shape
 

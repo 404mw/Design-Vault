@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -62,6 +63,7 @@ export async function FontDetail({ id }: { id: string }) {
       );
     }
 
+    revalidatePath("/fonts");
     redirect("/fonts");
   }
 

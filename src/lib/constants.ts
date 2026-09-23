@@ -52,6 +52,12 @@ export const COMPONENT_TYPES = [
 ] as const;
 export type ComponentType = (typeof COMPONENT_TYPES)[number];
 
+// Shared cap between the manually authored palette form (createPalette) and
+// the screen add/edit form's colour picker (client-side, hence living here
+// rather than alongside the DB-touching helpers in src/lib/palettes.ts) — a
+// palette is a curated set of swatches, not an open-ended list.
+export const MAX_PALETTE_COLOURS = 8;
+
 export const COLOR_ROLES = [
   "any",
   "background",

@@ -1,25 +1,17 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import crypto from "node:crypto";
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { COLOR_ROLES, type ColorRole } from "@/lib/constants";
-
-// Hex validation choice: require a full 6-digit #RRGGBB and reject 3-digit
-// shorthand rather than expand it. The paired <input type="color"> in
-// PaletteColorRows always emits 6-digit hex, so this constraint never bites
-// the normal picker flow — it only rejects hand-typed shorthand, which is
-// fine for a private single-user tool.
-const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+import { HEX_COLOUR_RE as HEX_RE, generatePaletteName, MAX_PALETTE_COLOURS } from "@/lib/palettes";
 
 type DraftColor = { name: string; hex: string; role: ColorRole };
 
 export async function createPalette(formData: FormData): Promise<void> {
   // Palettes have no user-facing name (removed from the form and every
-  // display) — this is an internal-only label, never shown, that exists
-  // purely because the DB column is NOT NULL and the export route needs
-  // *some* string to fall back on.
-  const name = `palette-${crypto.randomUUID().slice(0, 8)}`;
+  // display) — see generatePaletteName for why one still exists internally.
+  const name = generatePaletteName();
 
   const names = formData.getAll("color_name").map((v) => String(v));
   const hexes = formData.getAll("color_hex").map((v) => String(v));
@@ -53,8 +45,8 @@ export async function createPalette(formData: FormData): Promise<void> {
   if (complete.length < 2) {
     throw new Error("A palette needs at least 2 complete colors (name, hex, and role each).");
   }
-  if (complete.length > 8) {
-    throw new Error("A palette can have at most 8 colors.");
+  if (complete.length > MAX_PALETTE_COLOURS) {
+    throw new Error(`A palette can have at most ${MAX_PALETTE_COLOURS} colors.`);
   }
 
   const tagsRaw = String(formData.get("tags") ?? "").trim();
@@ -93,5 +85,6 @@ export async function createPalette(formData: FormData): Promise<void> {
     linkTag.run(paletteId, tagId);
   }
 
+  revalidatePath("/palettes");
   redirect("/palettes");
 }

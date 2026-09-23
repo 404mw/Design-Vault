@@ -1,16 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { saveUpload, saveUploadFromUrl, mediaTypeFromFilename } from "@/lib/uploads";
-import {
-  PAGE_TYPES,
-  LAYOUT_PATTERNS,
-  VERDICTS,
-  type PageType,
-  type LayoutPattern,
-  type Verdict,
-} from "@/lib/constants";
+import { readScreenFormValues, parseTagNames, upsertTagIds } from "@/lib/screen-form";
+import { createPaletteFromHexes, parseSavePaletteRequest } from "@/lib/palettes";
 
 export type NewScreenState = {
   error?: string;
@@ -31,45 +26,20 @@ function fail(error: string, values: NewScreenState["values"]): NewScreenState {
 }
 
 /**
- * Validates and inserts a new ui_screens row. `verdict` is required and
- * re-validated here even though the form marks it required, since that
- * can't be trusted to client-side HTML alone. `why` is deliberately optional.
+ * Validates and inserts a new ui_screens row, and optionally a companion
+ * palette from the "Colours" picker on the form (see src/lib/palettes.ts).
  */
 export async function createScreen(
   _prevState: NewScreenState,
   formData: FormData,
 ): Promise<NewScreenState> {
-  const page_type = String(formData.get("page_type") ?? "").trim();
-  const layout_pattern = String(formData.get("layout_pattern") ?? "").trim();
-  const verdict = String(formData.get("verdict") ?? "").trim();
-  const why = String(formData.get("why") ?? "").trim();
-  const snippet = String(formData.get("snippet") ?? "").trim();
-  const snippet_lang = String(formData.get("snippet_lang") ?? "").trim();
-  const source_url = String(formData.get("source_url") ?? "").trim();
-  const tagsRaw = String(formData.get("tags") ?? "").trim();
+  const { values, error } = readScreenFormValues(formData);
+  if (error) return fail(error, values);
+  const { page_type, layout_pattern, verdict, why, snippet, snippet_lang, source_url, tags: tagsRaw } =
+    values;
+
   const draggedUrl = String(formData.get("dragged_url") ?? "").trim();
   const file = formData.get("file");
-
-  const values = {
-    page_type,
-    layout_pattern,
-    verdict,
-    why,
-    snippet,
-    snippet_lang,
-    source_url,
-    tags: tagsRaw,
-  };
-
-  if (!PAGE_TYPES.includes(page_type as PageType)) {
-    return fail("Choose a valid page type.", values);
-  }
-  if (!LAYOUT_PATTERNS.includes(layout_pattern as LayoutPattern)) {
-    return fail("Choose a valid layout pattern.", values);
-  }
-  if (!VERDICTS.includes(verdict as Verdict)) {
-    return fail("Choose a verdict — love or hate.", values);
-  }
 
   let filePath: string;
   if (file instanceof File && file.size > 0) {
@@ -89,50 +59,56 @@ export async function createScreen(
 
   const media_type = mediaTypeFromFilename(filePath);
 
-  const tagNames = Array.from(
-    new Set(
-      tagsRaw
-        .split(",")
-        .map((t) => t.trim().toLowerCase())
-        .filter(Boolean),
-    ),
-  );
-
-  const insertTag = db.prepare("INSERT OR IGNORE INTO tags (name) VALUES (?)");
-  const getTagId = db.prepare("SELECT id FROM tags WHERE name = ?");
-  const tagIds: number[] = [];
-  for (const name of tagNames) {
-    insertTag.run(name);
-    const row = getTagId.get(name) as { id: number } | undefined;
-    if (row) tagIds.push(row.id);
+  const savePalette = parseSavePaletteRequest(formData);
+  if (savePalette.error) {
+    return fail(savePalette.error, values);
   }
 
-  const result = db
-    .prepare(
-      `INSERT INTO ui_screens
-        (media_type, file_path, page_type, layout_pattern, verdict, why, snippet, snippet_lang, source_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      media_type,
-      filePath,
-      page_type,
-      layout_pattern,
-      verdict,
-      why,
-      snippet || null,
-      snippet_lang || null,
-      source_url || null,
+  const tagIds = upsertTagIds(parseTagNames(tagsRaw));
+
+  let screenId = 0;
+  db.exec("BEGIN");
+  try {
+    const result = db
+      .prepare(
+        `INSERT INTO ui_screens
+          (media_type, file_path, page_type, layout_pattern, verdict, why, snippet, snippet_lang, source_url)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        media_type,
+        filePath,
+        page_type,
+        layout_pattern,
+        verdict,
+        why,
+        snippet || null,
+        snippet_lang || null,
+        source_url || null,
+      );
+
+    screenId = Number(result.lastInsertRowid);
+
+    const linkTag = db.prepare(
+      "INSERT OR IGNORE INTO ui_screen_tags (screen_id, tag_id) VALUES (?, ?)",
     );
+    for (const tagId of tagIds) {
+      linkTag.run(screenId, tagId);
+    }
 
-  const screenId = Number(result.lastInsertRowid);
+    if (savePalette.requested && savePalette.hexes.length >= 2) {
+      createPaletteFromHexes(savePalette.hexes, tagIds, screenId);
+    }
 
-  const linkTag = db.prepare(
-    "INSERT OR IGNORE INTO ui_screen_tags (screen_id, tag_id) VALUES (?, ?)",
-  );
-  for (const tagId of tagIds) {
-    linkTag.run(screenId, tagId);
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
   }
 
+  revalidatePath("/screens");
+  if (savePalette.requested && savePalette.hexes.length >= 2) {
+    revalidatePath("/palettes");
+  }
   redirect("/screens");
 }

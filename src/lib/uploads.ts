@@ -71,3 +71,18 @@ export async function saveUploadFromUrl(
 
   return `/uploads/${subdir}/${filename}`;
 }
+
+/**
+ * Only unlinks a file that actually lives under public/uploads/<subdir>/ — a
+ * safety check, since this deletes from disk. A missing file (already gone,
+ * or a nullable/blank path) is silently ignored rather than failing.
+ */
+export async function deleteUpload(
+  filePath: string | null | undefined,
+  subdir: "screens" | "fonts" | "components",
+) {
+  if (!filePath) return;
+  const normalized = filePath.replace(/^\/+/, "");
+  if (!normalized.startsWith(`uploads/${subdir}/`)) return;
+  await fs.rm(path.join(process.cwd(), "public", normalized), { force: true }).catch(() => {});
+}

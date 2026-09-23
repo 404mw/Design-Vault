@@ -27,6 +27,9 @@
   --aspect-media: 4 / 3;
   --aspect-palette-swatch: 3 / 4;
   --max-h-modal: 85vh;
+  --loupe-offset-y: -130%;
+  --size-loupe: 7rem;
+  --width-contrast-table: 560px;
 }
 
 @theme inline {
@@ -94,6 +97,10 @@ body {
   min-width: var(--width-index-search);
 }
 
+.min-w-contrast-table {
+  min-width: var(--width-contrast-table);
+}
+
 .border-b-nav-active {
   border-bottom-width: var(--border-width-nav-active);
 }
@@ -108,4 +115,15 @@ body {
 
 .max-h-modal {
   max-height: var(--max-h-modal);
+}
+
+/* Colour-picker magnifier loupe: centered horizontally on the pointer,
+   offset upward so it isn't hidden under a finger/cursor on touch. */
+.loupe-position {
+  transform: translate(-50%, var(--loupe-offset-y));
+}
+
+.loupe-size {
+  width: var(--size-loupe);
+  height: var(--size-loupe);
 }

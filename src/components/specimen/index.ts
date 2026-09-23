@@ -6,6 +6,7 @@ export { IndexBar, FilterSelect } from "./IndexBar";
 export { Pill } from "./Pill";
 export { TagsInput } from "./TagsInput";
 export { Modal } from "./Modal";
+export { ColourPicker } from "./ColourPicker";
 export {
   Field,
   TextInput,
