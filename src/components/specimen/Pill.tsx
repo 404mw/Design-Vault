@@ -1,9 +1,4 @@
-/**
- * A tag chip. Square corners, hairline border, tracked caps — the same
- * rectangle-and-hairline vocabulary as every other control in this system,
- * per the Shapes rule (the verdict stamp is the build's one circular
- * exception, tags are not a second one).
- */
+/** A soft rounded tag chip. */
 export function Pill({
   children,
   active = false,
@@ -16,10 +11,10 @@ export function Pill({
   | ({ as?: "span" } & React.HTMLAttributes<HTMLSpanElement>)
   | ({ as: "button" } & React.ButtonHTMLAttributes<HTMLButtonElement>)
 )) {
-  const className = `catalog-label inline-flex items-center border px-2 py-0.5 text-3xs transition-colors ${
+  const className = `inline-flex items-center rounded-full border px-3 py-1 font-sans text-2xs transition-colors ${
     active
-      ? "border-accent text-accent"
-      : "border-line text-ink-soft hover:border-line-strong hover:text-ink"
+      ? "border-accent bg-accent-soft text-accent"
+      : "border-transparent bg-paper-deep text-ink-soft hover:border-line-strong hover:text-ink"
   }`;
 
   if (Tag === "button") {

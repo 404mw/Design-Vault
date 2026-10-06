@@ -42,46 +42,35 @@ param, which this `force-dynamic` page re-renders against — no Enter needed (s
 `docs/features/screens.md` for the shared `IndexBar` mechanism). `/palettes` has no `FilterSelect`
 filter dropdowns, search only.
 
-`/palettes` uses a wider grid than the other three browse panels: `PlateGrid`'s `columns="wide"`
-variant (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`, capping at 3 columns) instead of the shared
-default 2/3/4/5-column grid `/screens`, `/fonts`, and `/components` still use; the `wide` variant
-also uses a larger `gap-6` between cards, instead of the shared default's `gap-4` — another
-palette-only divergence, alongside `columns="wide"` itself. Each grid card (`SpecimenPlate`) carries
-no spec (palettes are the one panel where `specs` is omitted — no color count or other caption is
-shown), shows its tags, and a taller `aspectClassName` (`aspect-palette-swatch`, a named CSS custom
-property resolving to `3 / 4`, instead of the shared default `aspect-media` at `4 / 3` every other
-panel uses) containing a custom `sample`: a vertical stack of full-width horizontal color bars, one
-per color, each taking equal height within the sample area. Each bar renders its own hex as the
-background, with a bold, larger pill-shaped label showing the color's name on top. The label's
-typography is another palette-only divergence: it uses `font-display` (Caslon Display, the same
-display serif as the page's own `<h1>`) at `text-4xl`/`font-black`, rather than the `catalog-label`
-convention (tracked-uppercase, `font-caption`, weight 500) used everywhere else in the app for specs,
-tags, and plate numbers — the label reads as a title rather than a caption stamp.
+The page opens with the shared `PageHeader` (`Palette` icon) and uses the same masonry `PlateGrid`
+and `SpecimenPlate` card as the other panels (see `docs/features/app-shell.md`). A palette card,
+top to bottom:
 
-Solid-color cards don't have the built-in visual texture that photo/video specimens elsewhere in the
-app do, so without help a palette card (especially the minimum 2-color case) can read as one
-undifferentiated block rather than distinct swatches, and can blend into neighboring cards in the
-grid. Two more palette-only additions address this: the flex column holding the stacked color bars
-has a `gap-1` between bars, so the card's own dark background shows through as a thin separator
-between adjacent bars; and `SpecimenPlate` takes an optional `plateBorderClassName` prop (default
-`"border-line"`, unchanged for `/screens`, `/fonts`, and `/components`) that `/palettes` sets to
-`"border-line-strong"`, giving palette cards a stronger border than the other three panels. Both are
-additive, palette-only divergences from the shared `SpecimenPlate`/`PlateGrid` defaults, in the same
-vein as `aspectClassName` and `columns="wide"` above.
+1. **Sample** — a horizontal colour strip: every colour side by side at equal widths, at a fixed
+   height of `--h-palette-strip`. No labels on the strip, and its height doesn't depend on colour
+   count.
+2. **Heading** — the `Palette` icon tile and the title "{n} colours" (n = the colour count;
+   "1 colour" when singular). The
+   title is derived, not a stored name (see "Deviations"). The spec line "From screen #N" appears
+   only when `source_screen_id` is set; it is plain text, not a link, since the card's
+   stretched link already opens the detail route.
+3. **Colour list** — passed as `SpecimenPlate`'s `children` (its between-heading-and-tags slot). One compact
+   row per colour in `position` order: a small round colour dot (`--size-swatch-dot`, with a subtle
+   border so near-white colours stay visible), the colour's name, its hex in mono uppercase, then,
+   pushed to the far right, the role as a small muted label (only when the role isn't `any`) and a
+   small copy button as the row's last item. When a colour's name equals its hex (as with auto-created palettes), the hex is shown
+   once, not twice. This list is what makes card height grow with colour count (2 to 8) in the
+   masonry grid.
 
-### Swatch label contrast (pill/bar)
-
-The label pill's background is picked by `pickPillColor(hex, siblingHexes)`
-(`src/lib/contrast.ts`): among the palette's *other* colors (siblings), it always picks whichever
-one contrasts best against the swatch's own hex — unconditionally, with no minimum-ratio (AA)
-requirement to clear first. It only falls back to `readableTextColor(hex)` (near-black or
-near-white, whichever contrasts more) when there are literally no sibling colors to choose from,
-which can't currently happen since every palette requires at least 2 colors. The label's own text
-color is always the swatch's own hex — so the label visually "belongs" to its swatch (reads in that
-color) while sitting on a pill background borrowed from elsewhere in the same palette. This logic is
-unchanged from the previous side-by-side layout; only the bar's orientation (full-width horizontal
-bars stacked vertically, rather than equal-width vertical segments in a row) and the label's
-typography (see "Browse grid" above) changed.
+   The copy button is the shared `CardCopyButton` (`src/components/specimen/CardCopyButton.tsx`; see `docs/features/app-shell.md`), a client component that shares its
+   clipboard logic with the detail view's `CopyHex`. Clicking it copies the hex to the clipboard
+   and swaps the icon for a check for about 1.5s. Its accessible label is "Copy #HEX", and a polite live region announces "Copied"; the hit
+   area is about 24px though the icon stays small. Clipboard logic is the shared `useCopy` hook
+   (`src/lib/useCopy.ts`), also used by the detail view's `CopyHex` and the screens/components
+   snippet `CopyButton`s. The card's link label is "{n}-colour palette: #HEX, #HEX, …". It does not
+   open the detail view: it is raised above the card's stretched link, while clicking anywhere
+   else on the row or card still navigates. Each colour adds one tab stop.
+4. **Tags** (up to 3, then "+N") and the date / "View details →" footer, as on every card.
 
 ## Add form (`/palettes/new`)
 
@@ -218,15 +207,12 @@ join table, cascade-deleting on either side.
 
 - **Browse-first landing, not search-first.** Per Constitution Rule 002, the grid always shows
   every palette; search narrows it, never gates it.
-- **No user-facing palette name.** The form and every display (grid card, detail view) omit a name
-  field entirely. The `name` column still exists and is still `NOT NULL` (a randomly generated
+- **No user-facing palette name.** The form and every display omit a name field entirely; the grid
+  card's title is derived ("{n} colours"), and the detail heading is likewise derived
+  (`{n}-Color Palette`), not read from `name`. The `name` column still exists and is still `NOT NULL` (a randomly generated
   `palette-{8 random hex chars}` string, written once at creation by `createPalette`) purely
   because the schema requires some string there and the export route's filename logic wants a
   fallback — it is never read back for display anywhere.
-- **Swatch labels use a sibling-color pill, not a generic black/white overlay.** `pickPillColor`
-  always borrows the best-contrasting other color already in the same palette for the label's
-  background, so a palette card visually reads as built entirely from its own colors; it only falls
-  back to near-black/near-white when there are no sibling colors at all to pick from.
 - **Contrast checking is a first-class section of the detail view**, not a separate tool — every
   `text` × `background`/`surface` pair in the palette is checked automatically against WCAG AA/AAA.
 - **`any` is the default role, and a real "opt out of contrast checking" value, not just a

@@ -35,34 +35,3 @@ export function aaResult(ratio: number): AaResult {
 export function aaaResult(ratio: number): AaaResult {
   return ratio >= 7 ? "Pass" : "Fail";
 }
-
-// Picks whichever of near-black/near-white reads better on a given swatch,
-// for overlaying a color's name directly on its own strip segment.
-// Literal hex mirrors --paper-deep/--ink in globals.css (CSS custom
-// properties aren't readable from plain hex math, so keep these in sync by hand).
-export function readableTextColor(hex: string): string {
-  const onDark = contrastRatio(hex, "#0d0a06");
-  const onLight = contrastRatio(hex, "#f3ead6");
-  return onLight >= onDark ? "#f3ead6" : "#0d0a06";
-}
-
-/**
- * For a swatch's own name label: prefer another color already in the same
- * palette over a generic black/white overlay, so a palette's card reads as
- * built from its own colors — always the best-contrasting sibling, with no
- * minimum-ratio (AA) requirement. Used as the label's pill/strip background
- * (with the swatch's own hex as the text color drawn on top of it), so the
- * name still visually matches its swatch. Falls back to readableTextColor
- * only when there are no siblings to pick from at all.
- */
-export function pickPillColor(hex: string, siblingHexes: string[]): string {
-  let best: { hex: string; ratio: number } | null = null;
-  for (const sibling of siblingHexes) {
-    if (sibling.toLowerCase() === hex.toLowerCase()) continue;
-    const ratio = contrastRatio(hex, sibling);
-    if (!best || ratio > best.ratio) {
-      best = { hex: sibling, ratio };
-    }
-  }
-  return best ? best.hex : readableTextColor(hex);
-}

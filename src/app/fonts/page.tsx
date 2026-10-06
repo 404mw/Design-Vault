@@ -1,6 +1,6 @@
-import Link from "next/link";
+import { Type } from "lucide-react";
 import { db } from "@/lib/db";
-import { IndexBar, FilterSelect, PlateGrid, SpecimenPlate, EmptyPlate } from "@/components/specimen";
+import { IndexBar, FilterSelect, PlateGrid, SpecimenPlate, EmptyPlate, PageHeader, NewButton, CardCopyButton } from "@/components/specimen";
 import { LICENCES } from "@/lib/constants";
 import { FontFace } from "./FontFace";
 
@@ -16,6 +16,10 @@ type FontRow = {
   licence: string;
   created_at: string;
 };
+
+type ExtraFile = { id: number; font_id: number; file_path: string; weight_label: string };
+
+const MAX_VARIANT_ROWS = 4;
 
 export default async function FontsPage({
   searchParams,
@@ -50,27 +54,29 @@ export default async function FontsPage({
 
   const hasFilters = Boolean(query || licence);
 
-  const variantCounts = new Map<number, number>();
+  const extraFiles = new Map<number, ExtraFile[]>();
   if (rows.length > 0) {
-    const counts = db
+    const files = db
       .prepare(
-        `SELECT font_id, COUNT(*) c FROM font_files WHERE font_id IN (${rows.map(() => "?").join(",")}) GROUP BY font_id`,
+        `SELECT id, font_id, file_path, weight_label FROM font_files
+         WHERE font_id IN (${rows.map(() => "?").join(",")})
+         ORDER BY font_id, position, id`,
       )
-      .all(...rows.map((r) => r.id)) as { font_id: number; c: number }[];
-    for (const c of counts) variantCounts.set(c.font_id, c.c);
+      .all(...rows.map((r) => r.id)) as ExtraFile[];
+    for (const f of files) {
+      const list = extraFiles.get(f.font_id) ?? [];
+      list.push(f);
+      extraFiles.set(f.font_id, list);
+    }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
-        <h1 className="font-display text-2xl text-ink">Fonts</h1>
-        <Link
-          href="/fonts/new"
-          className="catalog-label border border-ink bg-ink px-5 py-2.5 text-2xs text-paper transition-colors hover:bg-accent hover:border-accent"
-        >
-          + New Font
-        </Link>
-      </div>
+      <PageHeader
+        icon={<Type />}
+        title="Fonts"
+        description="Typefaces saved with their licence, ready to preview and compare."
+      />
 
       <IndexBar
         searchName="q"
@@ -78,6 +84,7 @@ export default async function FontsPage({
         defaultSearch={query}
       >
         <FilterSelect name="licence" label="Licence" options={LICENCES} defaultValue={licence} />
+        <NewButton href="/fonts/new">New Font</NewButton>
       </IndexBar>
 
       <PlateGrid>
@@ -87,27 +94,70 @@ export default async function FontsPage({
           </EmptyPlate>
         ) : (
           rows.map((row) => {
-            const extra = variantCounts.get(row.id) ?? 0;
+            const extras = extraFiles.get(row.id) ?? [];
+            const extra = extras.length;
             const variantSpec = extra > 0 ? `${extra + 1} variants` : row.weights;
+            // Primary file first, then the extra font_files rows. Each variant
+            // gets its own FontFace id so family names never collide with the
+            // sample's `specimen-{id}`.
+            const variants = [
+              { key: "v0", filePath: row.file_path, label: row.weights.trim() || "Regular" },
+              ...extras.map((f) => ({
+                key: `v${f.id}`,
+                filePath: f.file_path,
+                label: f.weight_label.trim() || "Regular",
+              })),
+            ];
+            const hiddenCount = variants.length - MAX_VARIANT_ROWS;
+            const escapedFamily = row.family_name.replace(/[\\"]/g, "\\$&");
+            const cssFamilyDecl = `font-family: "${escapedFamily}";`;
             return (
               <SpecimenPlate
                 key={row.id}
                 href={`/fonts/${row.id}`}
+                icon={<Type />}
                 title={row.family_name}
-                specs={[variantSpec, row.licence]}
+                createdAt={row.created_at}
+                specs={[row.foundry, variantSpec, row.licence].filter((s): s is string => Boolean(s))}
                 sample={
-                  <div className="flex h-full items-center justify-center p-4">
+                  <div className="min-h-font-sample flex items-center justify-center p-6">
                     <FontFace
                       id={row.id}
                       filePath={row.file_path}
                       familyName={row.family_name}
-                      className="text-center text-2xl leading-tight text-ink break-words"
+                      className="text-center text-3xl leading-tight text-ink break-words"
                     >
                       {row.family_name}
                     </FontFace>
                   </div>
                 }
-              />
+              >
+                <ul className="space-y-1.5">
+                  <li className="flex items-center gap-2 text-2xs">
+                    <span className="min-w-0 truncate font-mono text-ink-soft">{cssFamilyDecl}</span>
+                    <span className="ml-auto flex shrink-0 items-center gap-2">
+                      <CardCopyButton
+                        text={cssFamilyDecl}
+                        label={`Copy font-family for ${row.family_name}`}
+                      />
+                    </span>
+                  </li>
+                  {variants.slice(0, MAX_VARIANT_ROWS).map((v) => (
+                    <li key={v.key} className="flex items-center gap-2 text-2xs">
+                      <FontFace
+                        id={`f${row.id}-${v.key}`}
+                        filePath={v.filePath}
+                        className="min-w-0 truncate text-ink"
+                      >
+                        {v.label}
+                      </FontFace>
+                    </li>
+                  ))}
+                  {hiddenCount > 0 && (
+                    <li className="text-2xs text-ink-faint">+{hiddenCount} more</li>
+                  )}
+                </ul>
+              </SpecimenPlate>
             );
           })
         )}

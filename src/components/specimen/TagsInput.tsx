@@ -98,7 +98,7 @@ export function TagsInput({
             }
           }}
           placeholder="Type a new tag, press Enter"
-          className="w-full border border-line bg-paper px-3 py-2 font-serif text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+          className="w-full border border-line bg-paper px-3 py-2 font-sans text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent"
         />
         <button
           type="button"

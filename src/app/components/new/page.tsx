@@ -13,7 +13,7 @@ export default function NewComponentPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <header className="mb-8 border-b border-line-strong pb-4">
-        <h1 className="font-display text-2xl text-ink">Add a New Component</h1>
+        <h1 className="font-sans text-2xl text-ink">Add a New Component</h1>
       </header>
       <NewComponentForm tagNames={tagNames} />
     </div>

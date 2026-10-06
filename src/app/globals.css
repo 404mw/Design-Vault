@@ -1,31 +1,46 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --paper: #16130d;
-  --paper-raised: #221d14;
-  --paper-deep: #0d0a06;
-  --ink: #f3ead6;
-  --ink-soft: #b8a98a;
-  --ink-faint: #93856a;
-  --line: #362f21;
-  --line-strong: #4d4430;
-  --accent: #e2632f;
-  --accent-soft: #b98567;
+  --paper: #f7f7fb;
+  --paper-raised: #ffffff;
+  --paper-deep: #eef0f6;
+  --ink: #1a1b2e;
+  --ink-soft: #5b5f77;
+  --ink-faint: #666a82;
+  --line: #e6e7ef;
+  --line-strong: #d4d6e2;
+  --accent: #5b3df5;
+  --accent-soft: #ece8ff;
+  --scrim: rgb(26 27 46 / 0.55);
 
-  --font-display: var(--font-caslon-display);
-  --font-serif: var(--font-caslon-text);
-  --font-caption: var(--font-barlow-condensed);
-  --font-catalog-mono: var(--font-spline-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-spline-mono);
 
   --text-2xs: 0.6875rem;
   --text-3xs: 0.625rem;
 
+  --radius-card: 1rem;
+  --radius-control: 0.75rem;
+  --radius-sample: 0.75rem;
+  --shadow-card: 0 1px 2px rgb(26 27 46 / 0.04), 0 4px 16px rgb(26 27 46 / 0.05);
+  --shadow-card-hover: 0 2px 4px rgb(26 27 46 / 0.06), 0 10px 28px rgb(91 61 245 / 0.14);
+
   --width-index-search: 220px;
-  --border-width-nav-active: 1.5px;
-  --aspect-media: 4 / 3;
-  --aspect-palette-swatch: 3 / 4;
+  --border-width-nav-active: 2px;
+  --max-h-plate-media: 28rem;
+  --h-palette-strip: 6rem;
+  --size-swatch-dot: 0.875rem;
+  --min-h-font-sample: 12rem;
+  --size-icon-tile: 2.5rem;
+  --size-icon-tile-lg: 3.5rem;
+  --size-stamp-sm: 2.25rem;
+  --size-stamp-md: 2.5rem;
+  --border-width-stamp: 1.5px;
+  --size-icon: 1.25rem;
+  --size-icon-lg: 1.5rem;
+  --max-w-page-description: 36rem;
   --max-h-modal: 85vh;
   --loupe-offset-y: -130%;
   --size-loupe: 7rem;
@@ -43,11 +58,16 @@
   --color-line-strong: var(--line-strong);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
+  --color-scrim: var(--scrim);
 
-  --font-display: var(--font-display);
-  --font-serif: var(--font-serif);
-  --font-caption: var(--font-caption);
-  --font-catalog-mono: var(--font-catalog-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --radius-card: var(--radius-card);
+  --radius-control: var(--radius-control);
+  --radius-sample: var(--radius-sample);
+  --shadow-card: var(--shadow-card);
+  --shadow-card-hover: var(--shadow-card-hover);
 
   --text-2xs: var(--text-2xs);
   --text-2xs--line-height: 1.2;
@@ -58,24 +78,53 @@
 body {
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
 }
 
-/* Specimen-catalog primitives shared across all three routes.
-   Tracked, small-caps caption style used for spec labels, plate numbers,
-   classification headings — the print convention this whole world borrows. */
-.catalog-label {
-  font-family: var(--font-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-weight: 500;
+/* Pointer cursor on interactive elements (Tailwind v4 preflight resets
+   buttons to the default cursor). Base layer so cursor-* utilities override. */
+@layer base {
+  a[href],
+  button,
+  [role="button"],
+  select,
+  summary,
+  label[for],
+  label:has(input[type="checkbox"], input[type="radio"], input[type="file"], input[type="color"]),
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="color"],
+  input[type="file"],
+  input[type="submit"],
+  input[type="button"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
-.catalog-number {
-  font-family: var(--font-catalog-mono);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
-  color: var(--accent-soft);
+/* Small tracked uppercase label used for spec labels, nav subtitles and
+   filter captions. Layered so Tailwind utilities (tracking-*, font-*,
+   text-*) placed alongside these classes can override them. */
+@layer components {
+  .catalog-label {
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: 500;
+  }
+
+  .catalog-number {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+  }
 }
 
 .hairline {
@@ -84,9 +133,23 @@ body {
 
 /* Ink stamp marks used for verdicts — shape carries meaning, not color. */
 .stamp-ring {
-  border: 1.5px solid var(--accent);
+  border: var(--border-width-stamp) solid var(--accent);
   border-radius: 9999px;
   color: var(--accent);
+}
+
+.size-stamp-sm {
+  width: var(--size-stamp-sm);
+  height: var(--size-stamp-sm);
+}
+
+.size-stamp-md {
+  width: var(--size-stamp-md);
+  height: var(--size-stamp-md);
+}
+
+.stamp-void line {
+  stroke-width: var(--border-width-stamp);
 }
 
 .stamp-void {
@@ -105,12 +168,50 @@ body {
   border-bottom-width: var(--border-width-nav-active);
 }
 
-.aspect-media {
-  aspect-ratio: var(--aspect-media);
+.max-h-plate-media {
+  max-height: var(--max-h-plate-media);
 }
 
-.aspect-palette-swatch {
-  aspect-ratio: var(--aspect-palette-swatch);
+.h-palette-strip {
+  height: var(--h-palette-strip);
+}
+
+.size-swatch-dot {
+  width: var(--size-swatch-dot);
+  height: var(--size-swatch-dot);
+}
+
+.min-h-font-sample {
+  min-height: var(--min-h-font-sample);
+}
+
+.size-icon-tile {
+  width: var(--size-icon-tile);
+  height: var(--size-icon-tile);
+}
+
+.size-icon-tile-lg {
+  width: var(--size-icon-tile-lg);
+  height: var(--size-icon-tile-lg);
+}
+
+.size-icon-tile > svg {
+  width: var(--size-icon);
+  height: var(--size-icon);
+}
+
+.size-icon-tile-lg > svg {
+  width: var(--size-icon-lg);
+  height: var(--size-icon-lg);
+}
+
+.max-w-page-description {
+  max-width: var(--max-w-page-description);
+}
+
+/* Spans every column of a CSS multi-column container (PlateGrid). */
+.column-span-all {
+  column-span: all;
 }
 
 .max-h-modal {

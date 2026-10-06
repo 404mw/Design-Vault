@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Upload } from "lucide-react";
+import { dropzoneToneClass, useWindowFileDrag } from "@/lib/useWindowFileDrag";
+import { DropBackdrop } from "@/components/specimen/DropBackdrop";
 
 export type SpecimenPreview = {
   mediaType: "image" | "video";
@@ -37,6 +40,7 @@ export function UploadDropzone({
   );
   const [draggedUrl, setDraggedUrl] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const isDraggingFiles = useWindowFileDrag();
   const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -146,45 +150,53 @@ export function UploadDropzone({
   }
 
   return (
-    <div
-      tabIndex={0}
-      onPaste={handlePaste}
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-      onDragLeave={() => setIsDragging(false)}
-      className={`flex flex-col items-center justify-center gap-3 border border-dashed px-4 py-8 text-center outline-none transition-colors ${
-        isDragging ? "border-accent bg-paper-deep" : "border-line"
-      }`}
-    >
-      {previewUrl ? (
-        <div className="w-full max-w-sm overflow-hidden border border-line bg-paper-deep">
-          {previewKind === "video" ? (
-            // eslint-disable-next-line jsx-a11y/media-has-caption
-            <video src={previewUrl} controls className="w-full" />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={previewUrl} alt="Captured specimen preview" className="w-full" />
-          )}
-        </div>
-      ) : (
-        <p className="catalog-label text-2xs text-ink-faint">
-          Paste (Ctrl+V), drag from a tab, or choose a file
-        </p>
-      )}
+    <>
+      <DropBackdrop show={isDraggingFiles} />
+      <div
+        tabIndex={0}
+        onPaste={handlePaste}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={() => setIsDragging(false)}
+        className={`flex flex-col items-center justify-center gap-3 rounded-control border-2 border-dashed px-6 py-12 text-center outline-none transition-colors ${dropzoneToneClass(
+          isDraggingFiles,
+          isDragging,
+        )}`}
+      >
+        {previewUrl ? (
+          <div className="w-full max-w-sm overflow-hidden border border-line bg-paper-deep">
+            {previewKind === "video" ? (
+              // eslint-disable-next-line jsx-a11y/media-has-caption
+              <video src={previewUrl} controls className="w-full" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={previewUrl} alt="Captured specimen preview" className="w-full" />
+            )}
+          </div>
+        ) : (
+          <>
+            <Upload aria-hidden="true" className="h-8 w-8 text-accent" />
+            <p className="font-sans text-lg text-ink">Drop an image or video here</p>
+            <p className="catalog-label text-2xs text-ink-soft">
+              Paste (Ctrl+V), drag from a tab, or choose a file
+            </p>
+          </>
+        )}
 
-      <label className="catalog-label cursor-pointer text-2xs text-ink-soft underline underline-offset-2 hover:text-ink">
-        Choose file
-        <input
-          ref={fileInputRef}
-          type="file"
-          name="file"
-          accept="image/*,video/mp4,video/webm"
-          onChange={handleFileInputChange}
-          className="sr-only"
-        />
-      </label>
+        <label className="catalog-label cursor-pointer text-2xs text-ink-soft underline underline-offset-2 hover:text-ink">
+          Choose file
+          <input
+            ref={fileInputRef}
+            type="file"
+            name="file"
+            accept="image/*,video/mp4,video/webm"
+            onChange={handleFileInputChange}
+            className="sr-only"
+          />
+        </label>
 
-      <input type="hidden" name="dragged_url" value={draggedUrl} readOnly />
-    </div>
+        <input type="hidden" name="dragged_url" value={draggedUrl} readOnly />
+      </div>
+    </>
   );
 }

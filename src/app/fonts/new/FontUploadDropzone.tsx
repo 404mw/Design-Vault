@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Upload } from "lucide-react";
+import { dropzoneToneClass, useWindowFileDrag } from "@/lib/useWindowFileDrag";
+import { DropBackdrop } from "@/components/specimen/DropBackdrop";
 import { isAcceptedFontFilename, isFontCollectionFilename } from "@/lib/font-parse";
 import { expandArchive, isArchiveFilename } from "@/lib/client-archive";
 import { filesFromDataTransferItems, supportsEntryWalk } from "@/lib/client-entries";
@@ -37,6 +40,7 @@ export function FontUploadDropzone({
 }) {
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const isDraggingFiles = useWindowFileDrag();
   const [isBusy, setIsBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -142,96 +146,111 @@ export function FontUploadDropzone({
     }
   }
 
-  function handlePicked(fileList: FileList | null) {
+  function handlePicked(fileList: FileList | null, isFolder = false) {
     const picked = fileList ? Array.from(fileList) : [];
-    if (picked.length === 0) return;
+    if (picked.length === 0) {
+      if (isFolder) {
+        setNotice(
+          "Nothing could be read from that folder. To add a .zip, use Choose files or a zip, or drop it here.",
+        );
+      }
+      return;
+    }
     ingest(picked).catch((err) => {
       setNotice(errorMessage(err, "Couldn't read the selected files — try again."));
     });
   }
 
   return (
-    <div
-      onDrop={handleDrop}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setIsDragging(true);
-      }}
-      onDragLeave={() => setIsDragging(false)}
-      className={`flex flex-col gap-3 border border-dashed px-4 py-6 transition-colors ${
-        isDragging ? "border-accent bg-paper-deep" : "border-line"
-      }`}
-    >
-      {files.length === 0 ? (
-        <p className="catalog-label text-center text-2xs text-ink-faint">
-          Drag a folder, a .zip/.rar/.7z/.tar archive, or files here
+    <>
+      <DropBackdrop show={isDraggingFiles} />
+      <div
+        onDrop={handleDrop}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        className={`flex flex-col gap-3 rounded-control border-2 border-dashed px-6 py-10 transition-colors ${dropzoneToneClass(
+          isDraggingFiles,
+          isDragging,
+        )}`}
+      >
+        {files.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 text-center">
+            <Upload aria-hidden="true" className="h-8 w-8 text-accent" />
+            <p className="font-sans text-lg text-ink">Drop fonts here</p>
+            <p className="catalog-label text-2xs text-ink-soft">
+              Drag a folder, a .zip/.rar/.7z/.tar archive, or files here
+            </p>
+          </div>
+        ) : (
+          <ul className="flex flex-col gap-1.5">
+            {files.map((f, i) => (
+              <li
+                key={`${f.name}-${f.size}-${i}`}
+                className="flex items-center justify-between gap-3 border border-line bg-paper px-3 py-1.5"
+              >
+                <span className="truncate font-mono text-xs text-ink">{f.name}</span>
+                <span className="flex shrink-0 items-center gap-3">
+                  <span className="catalog-number text-3xs">{formatSize(f.size)}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(i)}
+                    className="catalog-label text-3xs text-ink-faint hover:text-accent"
+                    aria-label={`Remove ${f.name}`}
+                  >
+                    Remove
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {isBusy && <p className="text-xs text-ink-faint">Expanding archive…</p>}
+        {notice && <p className="text-xs text-accent">{notice}</p>}
+
+        <span className="flex flex-wrap gap-4">
+          <label className="catalog-label cursor-pointer self-start text-2xs text-ink-soft underline underline-offset-2 hover:text-ink">
+            {files.length === 0 ? "Choose files or a zip" : "Add more files or a zip"}
+            <input
+              type="file"
+              multiple
+              accept=".ttf,.otf,.woff,.woff2,.zip,.rar,.7z,.tar"
+              onChange={(e) => {
+                handlePicked(e.target.files);
+                e.target.value = "";
+              }}
+              className="sr-only"
+            />
+          </label>
+
+          <label className="catalog-label cursor-pointer self-start text-2xs text-ink-soft underline underline-offset-2 hover:text-ink">
+            Choose a folder
+            <input
+              ref={(el) => {
+                // webkitdirectory has no React prop — set it directly on the
+                // element so the OS picker opens in folder-selection mode.
+                el?.setAttribute("webkitdirectory", "");
+              }}
+              type="file"
+              multiple
+              onChange={(e) => {
+                handlePicked(e.target.files, true);
+                e.target.value = "";
+              }}
+              className="sr-only"
+            />
+          </label>
+        </span>
+
+        <p className="text-xs text-ink-faint">
+          TTF, OTF, WOFF, or WOFF2 — drop a folder, a .zip/.rar/.7z/.tar archive, or select files
+          directly. Font collections (.ttc) aren&apos;t supported since browsers can&apos;t render
+          them; extract the individual font files first.
         </p>
-      ) : (
-        <ul className="flex flex-col gap-1.5">
-          {files.map((f, i) => (
-            <li
-              key={`${f.name}-${f.size}-${i}`}
-              className="flex items-center justify-between gap-3 border border-line bg-paper px-3 py-1.5"
-            >
-              <span className="truncate font-catalog-mono text-xs text-ink">{f.name}</span>
-              <span className="flex shrink-0 items-center gap-3">
-                <span className="catalog-number text-3xs">{formatSize(f.size)}</span>
-                <button
-                  type="button"
-                  onClick={() => removeFile(i)}
-                  className="catalog-label text-3xs text-ink-faint hover:text-accent"
-                  aria-label={`Remove ${f.name}`}
-                >
-                  Remove
-                </button>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {isBusy && <p className="text-xs text-ink-faint">Expanding archive…</p>}
-      {notice && <p className="text-xs text-accent">{notice}</p>}
-
-      <span className="flex flex-wrap gap-4">
-        <label className="catalog-label cursor-pointer self-start text-2xs text-ink-soft underline underline-offset-2 hover:text-ink">
-          {files.length === 0 ? "Choose files" : "Add more files"}
-          <input
-            type="file"
-            multiple
-            accept=".ttf,.otf,.woff,.woff2,.zip,.rar,.7z,.tar"
-            onChange={(e) => {
-              handlePicked(e.target.files);
-              e.target.value = "";
-            }}
-            className="sr-only"
-          />
-        </label>
-
-        <label className="catalog-label cursor-pointer self-start text-2xs text-ink-soft underline underline-offset-2 hover:text-ink">
-          Choose a folder
-          <input
-            ref={(el) => {
-              // webkitdirectory has no React prop — set it directly on the
-              // element so the OS picker opens in folder-selection mode.
-              el?.setAttribute("webkitdirectory", "");
-            }}
-            type="file"
-            multiple
-            onChange={(e) => {
-              handlePicked(e.target.files);
-              e.target.value = "";
-            }}
-            className="sr-only"
-          />
-        </label>
-      </span>
-
-      <p className="text-xs text-ink-faint">
-        TTF, OTF, WOFF, or WOFF2 — drop a folder, a .zip/.rar/.7z/.tar archive, or select files
-        directly. Font collections (.ttc) aren&apos;t supported since browsers can&apos;t render
-        them; extract the individual font files first.
-      </p>
-    </div>
+      </div>
+    </>
   );
 }

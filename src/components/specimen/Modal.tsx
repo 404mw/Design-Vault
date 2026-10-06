@@ -27,13 +27,13 @@ export function Modal({ children }: { children: React.ReactNode }) {
       }}
     >
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-paper-deep/90" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-scrim" />
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-4 py-8 sm:py-12">
-          <Dialog.Content className="relative w-full max-w-3xl border border-line bg-paper">
+          <Dialog.Content className="relative w-full max-w-3xl rounded-card border border-line bg-paper shadow-card">
             <Dialog.Title className="sr-only">Dialog</Dialog.Title>
             <Dialog.Close
               aria-label="Close"
-              className="catalog-label absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center border border-line bg-paper text-ink-soft transition-colors hover:border-accent hover:text-accent"
+              className="catalog-label absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-control border border-line bg-paper text-ink-soft transition-colors hover:border-accent hover:text-accent"
             >
               ×
             </Dialog.Close>

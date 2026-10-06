@@ -70,7 +70,7 @@ export function PaletteColorRows() {
           </Field>
 
           <Field label="Hex" required>
-            <div className="flex w-full items-center border border-line bg-paper px-3 py-2 font-serif text-sm text-ink focus-within:border-accent">
+            <div className="flex w-full items-center border border-line bg-paper px-3 py-2 font-sans text-sm text-ink focus-within:border-accent">
               <span className="text-ink-faint">#</span>
               <input
                 value={row.hex.replace(/^#/, "")}

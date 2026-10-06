@@ -71,7 +71,7 @@ export async function PaletteDetail({ id }: { id: string }) {
   return (
     <div>
       <div className="mb-8 flex flex-wrap items-baseline justify-between gap-4 border-b border-line-strong pb-4">
-        <h1 className="font-display text-2xl text-ink">
+        <h1 className="font-sans text-2xl text-ink">
           {colors.length}-Color Palette
         </h1>
         <div className="flex items-center gap-4">

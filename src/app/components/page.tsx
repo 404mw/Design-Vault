@@ -1,14 +1,19 @@
-import Link from "next/link";
+import { Code, Component, Link as Link2 } from "lucide-react";
 import {
+  CardCopyButton,
+  CardLinkButton,
   IndexBar,
   FilterSelect,
   PlateGrid,
   SpecimenPlate,
   EmptyPlate,
+  PageHeader,
+  NewButton,
 } from "@/components/specimen";
 import { COMPONENT_TYPES } from "@/lib/constants";
 import type { MediaType } from "@/lib/constants";
 import { db } from "@/lib/db";
+import { safeHttpUrl } from "@/lib/urls";
 
 // Reads the DB directly on every request — must not be statically cached.
 export const dynamic = "force-dynamic";
@@ -19,7 +24,16 @@ type ComponentRow = {
   file_path: string;
   name: string;
   component_type: string;
+  created_at: string;
+  snippet: string | null;
+  snippet_lang: string | null;
+  source_url: string | null;
 };
+
+// `url` has already passed safeHttpUrl, so it always parses.
+function sourceHost(url: string): string {
+  return new URL(url).hostname;
+}
 
 export default async function ComponentsPage({
   searchParams,
@@ -56,7 +70,8 @@ export default async function ComponentsPage({
 
   const rows = db
     .prepare(
-      `SELECT c.id, c.media_type, c.file_path, c.name, c.component_type
+      `SELECT c.id, c.media_type, c.file_path, c.name, c.component_type, c.created_at,
+              c.snippet, c.snippet_lang, c.source_url
        FROM ui_components c
        ${where}
        ORDER BY c.id DESC`,
@@ -83,15 +98,11 @@ export default async function ComponentsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4">
-        <h1 className="font-display text-2xl text-ink">UI Components</h1>
-        <Link
-          href="/components/new"
-          className="catalog-label whitespace-nowrap border border-ink bg-ink px-4 py-2 text-2xs text-paper transition-colors hover:border-accent hover:bg-accent"
-        >
-          + New Component
-        </Link>
-      </div>
+      <PageHeader
+        icon={<Component />}
+        title="UI Components"
+        description="Buttons, cards, and other interface pieces worth reusing."
+      />
 
       <IndexBar
         searchName="q"
@@ -99,6 +110,7 @@ export default async function ComponentsPage({
         defaultSearch={q}
       >
         <FilterSelect name="component_type" label="Type" options={COMPONENT_TYPES} defaultValue={componentType} />
+        <NewButton href="/components/new">New Component</NewButton>
       </IndexBar>
 
       <PlateGrid>
@@ -109,7 +121,11 @@ export default async function ComponentsPage({
               : "No components filed yet — add the first one."}
           </EmptyPlate>
         ) : (
-          rows.map((row) => (
+          rows.map((row) => {
+            const hasSnippet = Boolean(row.snippet);
+            const sourceUrl = safeHttpUrl(row.source_url);
+            const hasSource = sourceUrl !== null;
+            return (
             <SpecimenPlate
               key={row.id}
               href={`/components/${row.id}`}
@@ -117,7 +133,7 @@ export default async function ComponentsPage({
                 row.media_type === "video" ? (
                   <video
                     src={row.file_path}
-                    className="h-full w-full object-cover object-top"
+                    className="h-auto w-full max-h-plate-media object-cover object-top"
                     muted
                   />
                 ) : (
@@ -125,15 +141,43 @@ export default async function ComponentsPage({
                   <img
                     src={row.file_path}
                     alt={row.name}
-                    className="h-full w-full object-cover object-top"
+                    className="h-auto w-full max-h-plate-media object-cover object-top"
                   />
                 )
               }
+              icon={<Component />}
               title={row.name}
+              createdAt={row.created_at}
               specs={[row.component_type]}
               tags={tagsByComponent.get(row.id)}
-            />
-          ))
+            >
+              {(hasSnippet || hasSource) && (
+                <ul className="space-y-1.5">
+                  {hasSnippet && (
+                    <li className="flex items-center gap-2 text-2xs">
+                      <Code aria-hidden className="size-3.5 shrink-0 text-ink-faint" />
+                      <span className="min-w-0 truncate text-ink-soft">
+                        {row.snippet_lang ? `${row.snippet_lang.toUpperCase()} snippet` : "Snippet"}
+                      </span>
+                      <span className="ml-auto flex shrink-0 items-center gap-2">
+                        <CardCopyButton text={row.snippet ?? ""} label={`Copy ${row.name} snippet`} />
+                      </span>
+                    </li>
+                  )}
+                  {sourceUrl && (
+                    <li className="flex items-center gap-2 text-2xs">
+                      <Link2 aria-hidden className="size-3.5 shrink-0 text-ink-faint" />
+                      <span className="min-w-0 truncate text-ink-soft">{sourceHost(sourceUrl)}</span>
+                      <span className="ml-auto flex shrink-0 items-center gap-2">
+                        <CardLinkButton href={sourceUrl} label={`Open source for ${row.name}`} />
+                      </span>
+                    </li>
+                  )}
+                </ul>
+              )}
+            </SpecimenPlate>
+            );
+          })
         )}
       </PlateGrid>
     </div>

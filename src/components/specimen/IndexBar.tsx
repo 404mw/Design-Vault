@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { ChevronDown, Plus, Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 /**
- * The classification index atop every browse route: a search field plus
- * fixed-list filter controls, styled as a catalog's front-of-book index
- * rather than a bolted-on search bar. Landing state is browse-first — this
+ * The toolbar atop every browse route: a search field plus fixed-list
+ * filter controls and an optional "+ New" button. Landing state is browse-first — this
  * sits above an already-populated plate grid, not an empty page.
  *
  * Search and filters are client-driven: typing debounces into a URL update
@@ -56,23 +57,39 @@ export function IndexBar({
     <form
       method="get"
       onSubmit={(e) => e.preventDefault()}
-      className="flex flex-wrap items-end gap-x-6 gap-y-3 border-b border-line-strong pb-5"
+      className="flex flex-wrap items-stretch gap-3"
     >
-      <div className="flex min-w-index-search flex-1 flex-col gap-1">
-        <label htmlFor={searchName} className="catalog-label text-3xs text-ink-faint">
+      <div className="relative min-w-index-search flex-1">
+        <label htmlFor={searchName} className="sr-only">
           Search
         </label>
+        <Search
+          aria-hidden
+          className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-ink-soft"
+        />
         <input
           id={searchName}
           name={searchName}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={searchPlaceholder}
-          className="border-b border-line bg-transparent py-1 font-serif text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+          className="h-full w-full rounded-control border border-line bg-paper-raised py-3 pl-12 pr-4 font-sans text-sm text-ink shadow-card outline-none placeholder:text-ink-faint focus:border-accent"
         />
       </div>
       {children}
     </form>
+  );
+}
+
+export function NewButton({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control bg-accent px-5 py-3 font-sans text-sm font-medium text-paper-raised transition-opacity hover:opacity-90"
+    >
+      <Plus aria-hidden className="size-4" />
+      {children}
+    </Link>
   );
 }
 
@@ -92,7 +109,7 @@ export function FilterSelect({
   const searchParams = useSearchParams();
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="relative flex min-w-32 flex-col rounded-control border border-line bg-paper-raised px-3 py-2 shadow-card focus-within:border-accent">
       <label htmlFor={name} className="catalog-label text-3xs text-ink-faint">
         {label}
       </label>
@@ -109,7 +126,7 @@ export function FilterSelect({
           }
           router.replace(`${pathname}?${params.toString()}`, { scroll: false });
         }}
-        className="catalog-label border-b border-line bg-paper py-1 pr-2 text-2xs text-ink outline-none focus:border-accent"
+        className="w-full cursor-pointer appearance-none bg-transparent pr-6 font-sans text-sm capitalize text-ink outline-none"
       >
         <option value="">All</option>
         {options.map((o) => (
@@ -118,6 +135,10 @@ export function FilterSelect({
           </option>
         ))}
       </select>
+      <ChevronDown
+        aria-hidden
+        className="pointer-events-none absolute bottom-2.5 right-3 size-4 text-ink-soft"
+      />
     </div>
   );
 }

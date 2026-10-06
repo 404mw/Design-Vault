@@ -1,10 +1,12 @@
-import Link from "next/link";
+import { LayoutGrid } from "lucide-react";
 import {
   IndexBar,
   FilterSelect,
   PlateGrid,
   SpecimenPlate,
   EmptyPlate,
+  PageHeader,
+  NewButton,
 } from "@/components/specimen";
 import { PAGE_TYPES, LAYOUT_PATTERNS, VERDICTS } from "@/lib/constants";
 import type { MediaType, Verdict } from "@/lib/constants";
@@ -21,6 +23,7 @@ type ScreenRow = {
   layout_pattern: string;
   verdict: Verdict;
   why: string;
+  created_at: string;
 };
 
 export default async function ScreensPage({
@@ -71,7 +74,7 @@ export default async function ScreensPage({
 
   const rows = db
     .prepare(
-      `SELECT s.id, s.media_type, s.file_path, s.page_type, s.layout_pattern, s.verdict, s.why
+      `SELECT s.id, s.media_type, s.file_path, s.page_type, s.layout_pattern, s.verdict, s.why, s.created_at
        FROM ui_screens s
        ${where}
        ORDER BY s.id DESC`,
@@ -98,15 +101,11 @@ export default async function ScreensPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4">
-        <h1 className="font-display text-2xl text-ink">UI Screens</h1>
-        <Link
-          href="/screens/new"
-          className="catalog-label whitespace-nowrap border border-ink bg-ink px-4 py-2 text-2xs text-paper transition-colors hover:border-accent hover:bg-accent"
-        >
-          + New Specimen
-        </Link>
-      </div>
+      <PageHeader
+        icon={<LayoutGrid />}
+        title="UI Screens"
+        description="Saved screens and layouts, filed with a verdict and a reason."
+      />
 
       <IndexBar
         searchName="q"
@@ -116,14 +115,15 @@ export default async function ScreensPage({
         <FilterSelect name="page_type" label="Page type" options={PAGE_TYPES} defaultValue={pageType} />
         <FilterSelect name="layout_pattern" label="Layout" options={LAYOUT_PATTERNS} defaultValue={layoutPattern} />
         <FilterSelect name="verdict" label="Verdict" options={VERDICTS} defaultValue={verdict} />
+        <NewButton href="/screens/new">New Screen</NewButton>
       </IndexBar>
 
       <PlateGrid>
         {rows.length === 0 ? (
           <EmptyPlate>
             {hasFilters
-              ? "No specimens match these filters."
-              : "No specimens filed yet — add the first one."}
+              ? "No screens match these filters."
+              : "No screens filed yet — add the first one."}
           </EmptyPlate>
         ) : (
           rows.map((row) => (
@@ -134,7 +134,7 @@ export default async function ScreensPage({
                 row.media_type === "video" ? (
                   <video
                     src={row.file_path}
-                    className="h-full w-full object-cover object-top"
+                    className="h-auto w-full max-h-plate-media object-cover object-top"
                     muted
                   />
                 ) : (
@@ -142,11 +142,15 @@ export default async function ScreensPage({
                   <img
                     src={row.file_path}
                     alt={row.why || `${row.page_type} screen`}
-                    className="h-full w-full object-cover object-top"
+                    className="h-auto w-full max-h-plate-media object-cover object-top"
                   />
                 )
               }
-              specs={[row.page_type, row.layout_pattern]}
+              icon={<LayoutGrid />}
+              title={row.page_type.charAt(0).toUpperCase() + row.page_type.slice(1)}
+              description={row.why || undefined}
+              specs={[row.layout_pattern]}
+              createdAt={row.created_at}
               tags={tagsByScreen.get(row.id)}
               verdict={row.verdict}
             />

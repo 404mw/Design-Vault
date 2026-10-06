@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -11,13 +10,22 @@ import {
   isAcceptedFontFilename,
   isFontCollectionFilename,
 } from "@/lib/font-parse";
+import { safeHttpUrl, SOURCE_URL_ERROR } from "@/lib/urls";
 import { LICENCES, type Licence } from "@/lib/constants";
 
-function fail(message: string): never {
-  redirect("/fonts/new?error=" + encodeURIComponent(message));
+export type SaveFontResult = { ok: true } | { ok: false; error: string };
+
+function err(error: string): SaveFontResult {
+  return { ok: false, error };
 }
 
-export async function createFont(formData: FormData) {
+/**
+ * Validates and saves ONE family's files (plus the shared licence/foundry/
+ * source fields) and reports the outcome as a result — no redirect, so the
+ * client can save several families one call at a time and keep going (or
+ * stop and show per-family errors) based on what comes back.
+ */
+export async function saveFontFamily(formData: FormData): Promise<SaveFontResult> {
   const files = formData
     .getAll("files")
     .filter((f): f is File => f instanceof File && f.size > 0);
@@ -26,7 +34,7 @@ export async function createFont(formData: FormData) {
   const sourceRaw = formData.get("source_url");
 
   if (files.length === 0) {
-    fail("Choose at least one font file — every variant of the family, if you have them.");
+    return err("Choose at least one font file — every variant of the family, if you have them.");
   }
 
   // The client-side dropzone/picker already filters to renderable formats —
@@ -36,34 +44,34 @@ export async function createFont(formData: FormData) {
   const rejected = files.filter((f) => !isAcceptedFontFilename(f.name));
   if (rejected.length > 0) {
     if (rejected.some((f) => isFontCollectionFilename(f.name))) {
-      fail(
+      return err(
         "Font collections (.ttc) aren't supported — browsers can't render them via @font-face. Extract the individual font files first and upload those.",
       );
     }
-    fail(
+    return err(
       `These aren't supported font files: ${rejected.map((f) => f.name).join(", ")} — use TTF, OTF, WOFF, or WOFF2.`,
     );
   }
 
   const licence = typeof licenceRaw === "string" ? licenceRaw : "";
   if (!LICENCES.includes(licence as Licence)) {
-    fail("Choose a licence.");
+    return err("Choose a licence.");
   }
 
   const parsedFiles: { file: File; familyName: string; weightLabel: string }[] = [];
   for (const file of files) {
-    const buffer = Buffer.from(await file.arrayBuffer());
     try {
+      const buffer = Buffer.from(await file.arrayBuffer());
       const parsed = await parseFontFile(buffer);
       parsedFiles.push({ file, ...parsed });
     } catch {
-      fail(`Couldn't read "${file.name}" — try a different file.`);
+      return err(`Couldn't read "${file.name}" — try a different file.`);
     }
   }
 
   const distinctFamilies = new Set(parsedFiles.map((p) => p.familyName.trim().toLowerCase()));
   if (distinctFamilies.size > 1) {
-    fail(
+    return err(
       `These files belong to different families (${[...new Set(parsedFiles.map((p) => p.familyName))].join(", ")}) — upload one family at a time.`,
     );
   }
@@ -74,6 +82,10 @@ export async function createFont(formData: FormData) {
     typeof foundryRaw === "string" && foundryRaw.trim() ? foundryRaw.trim() : null;
   const sourceUrl =
     typeof sourceRaw === "string" && sourceRaw.trim() ? sourceRaw.trim() : null;
+
+  if (sourceUrl && !safeHttpUrl(sourceUrl)) {
+    return err(SOURCE_URL_ERROR);
+  }
 
   // Files land on disk before the DB row exists, and there's no single
   // atomic step across "write N files" + "insert N+1 rows" — so on any
@@ -107,9 +119,9 @@ export async function createFont(formData: FormData) {
         insertVariant.run(fontId, variant.filePath, variant.weightLabel, i);
       });
       db.exec("COMMIT");
-    } catch (err) {
+    } catch (e) {
       db.exec("ROLLBACK");
-      throw err;
+      throw e;
     }
   } catch {
     await Promise.all(
@@ -117,9 +129,9 @@ export async function createFont(formData: FormData) {
         fs.rm(path.join(process.cwd(), "public", filePath), { force: true }).catch(() => {}),
       ),
     );
-    fail("Couldn't save this font — something went wrong writing the files or the database record. Try again.");
+    return err("Couldn't save this font — something went wrong writing the files or the database record. Try again.");
   }
 
   revalidatePath("/fonts");
-  redirect("/fonts");
+  return { ok: true };
 }

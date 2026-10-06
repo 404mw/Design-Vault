@@ -23,7 +23,7 @@ export function NewComponentForm({ tagNames }: { tagNames: string[] }) {
   return (
     <form action={formAction} className="flex flex-col gap-6">
       {state.error && (
-        <p className="border border-accent bg-paper-raised px-3 py-2 font-serif text-sm text-accent">
+        <p className="border border-accent bg-paper-raised px-3 py-2 font-sans text-sm text-accent">
           {state.error}
         </p>
       )}
@@ -55,7 +55,7 @@ export function NewComponentForm({ tagNames }: { tagNames: string[] }) {
             name="snippet"
             rows={4}
             defaultValue={state.values?.snippet ?? ""}
-            className="font-catalog-mono text-xs"
+            className="font-mono text-xs"
           />
         </Field>
         <Field label="Language">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { db } from "@/lib/db";
+import { safeHttpUrl } from "@/lib/urls";
 import { ConfirmButton } from "@/components/specimen";
 import { FontFace } from "../FontFace";
 
@@ -126,24 +127,24 @@ export async function FontDetail({ id }: { id: string }) {
       <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-t border-line pt-5 sm:grid-cols-4">
         <div>
           <dt className="catalog-label text-3xs text-ink-faint">Weight</dt>
-          <dd className="mt-1 font-serif text-sm text-ink">
+          <dd className="mt-1 font-sans text-sm text-ink">
             {variants.length > 1 ? `${variants.length} variants` : row.weights}
           </dd>
         </div>
         <div>
           <dt className="catalog-label text-3xs text-ink-faint">Licence</dt>
-          <dd className="mt-1 font-serif text-sm text-ink">{row.licence}</dd>
+          <dd className="mt-1 font-sans text-sm text-ink">{row.licence}</dd>
         </div>
         <div>
           <dt className="catalog-label text-3xs text-ink-faint">Foundry</dt>
-          <dd className="mt-1 font-serif text-sm text-ink">{row.foundry || "—"}</dd>
+          <dd className="mt-1 font-sans text-sm text-ink">{row.foundry || "—"}</dd>
         </div>
         <div>
           <dt className="catalog-label text-3xs text-ink-faint">Source</dt>
-          <dd className="mt-1 font-serif text-sm text-ink">
-            {row.source_url ? (
+          <dd className="mt-1 font-sans text-sm text-ink">
+            {safeHttpUrl(row.source_url) ? (
               <a
-                href={row.source_url}
+                href={row.source_url ?? undefined}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-accent underline underline-offset-2"
@@ -157,7 +158,7 @@ export async function FontDetail({ id }: { id: string }) {
         </div>
         <div>
           <dt className="catalog-label text-3xs text-ink-faint">Uploaded</dt>
-          <dd className="mt-1 font-serif text-sm text-ink">{row.created_at}</dd>
+          <dd className="mt-1 font-sans text-sm text-ink">{row.created_at}</dd>
         </div>
       </dl>
 

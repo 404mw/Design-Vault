@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { ConfirmButton, Pill } from "@/components/specimen";
 import { db } from "@/lib/db";
+import { safeHttpUrl } from "@/lib/urls";
 import { deleteUpload } from "@/lib/uploads";
 import type { MediaType } from "@/lib/constants";
 import { CopyButton } from "./CopyButton";
@@ -61,7 +62,7 @@ export async function ComponentDetail({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between border-b border-line-strong pb-4">
-        <h1 className="font-display text-2xl text-ink">{component.name}</h1>
+        <h1 className="font-sans text-2xl text-ink">{component.name}</h1>
         <span className="catalog-number text-2xs text-ink-faint">
           PLATE {String(component.id).padStart(3, "0")}
         </span>
@@ -79,7 +80,7 @@ export async function ComponentDetail({ id }: { id: string }) {
 
       <div>
         <p className="catalog-label text-3xs text-ink-faint">Component type</p>
-        <p className="font-serif text-sm text-ink">{component.component_type}</p>
+        <p className="font-sans text-sm text-ink">{component.component_type}</p>
       </div>
 
       {tags.length > 0 && (
@@ -93,14 +94,14 @@ export async function ComponentDetail({ id }: { id: string }) {
         </div>
       )}
 
-      {component.source_url && (
+      {safeHttpUrl(component.source_url) && (
         <div>
           <p className="catalog-label text-3xs text-ink-faint">Source</p>
           <a
-            href={component.source_url}
+            href={component.source_url ?? undefined}
             target="_blank"
             rel="noreferrer"
-            className="break-all font-serif text-sm text-accent underline underline-offset-2"
+            className="break-all font-sans text-sm text-accent underline underline-offset-2"
           >
             {component.source_url}
           </a>
@@ -116,7 +117,7 @@ export async function ComponentDetail({ id }: { id: string }) {
             <CopyButton text={component.snippet} />
           </div>
           <pre className="overflow-x-auto border border-line bg-paper-raised p-3">
-            <code className="font-catalog-mono text-xs text-ink">{component.snippet}</code>
+            <code className="font-mono text-xs text-ink">{component.snippet}</code>
           </pre>
         </div>
       )}

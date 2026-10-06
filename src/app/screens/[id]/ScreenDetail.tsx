@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { ConfirmButton, Pill, VerdictStamp } from "@/components/specimen";
 import { db } from "@/lib/db";
+import { safeHttpUrl } from "@/lib/urls";
 import { deleteUpload } from "@/lib/uploads";
 import type { MediaType, Verdict } from "@/lib/constants";
 import { CopyButton } from "./CopyButton";
@@ -76,7 +77,7 @@ export async function ScreenDetail({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between border-b border-line-strong pb-4">
-        <h1 className="font-display text-2xl capitalize text-ink">{screen.page_type}</h1>
+        <h1 className="font-sans text-2xl capitalize text-ink">{screen.page_type}</h1>
         <div className="flex items-center gap-3">
           <span className="catalog-number text-2xs text-ink-faint">
             PLATE {String(screen.id).padStart(3, "0")}
@@ -102,18 +103,18 @@ export async function ScreenDetail({ id }: { id: string }) {
       <div className="grid grid-cols-2 gap-6">
         <div>
           <p className="catalog-label text-3xs text-ink-faint">Page type</p>
-          <p className="font-serif text-sm text-ink">{screen.page_type}</p>
+          <p className="font-sans text-sm text-ink">{screen.page_type}</p>
         </div>
         <div>
           <p className="catalog-label text-3xs text-ink-faint">Layout pattern</p>
-          <p className="font-serif text-sm text-ink">{screen.layout_pattern}</p>
+          <p className="font-sans text-sm text-ink">{screen.layout_pattern}</p>
         </div>
       </div>
 
       {screen.why && (
         <div>
           <p className="catalog-label text-3xs text-ink-faint">Why</p>
-          <p className="font-serif text-sm text-ink">{screen.why}</p>
+          <p className="font-sans text-sm text-ink">{screen.why}</p>
         </div>
       )}
 
@@ -138,7 +139,7 @@ export async function ScreenDetail({ id }: { id: string }) {
               <Link
                 key={p.id}
                 href={`/palettes/${p.id}`}
-                className="font-serif text-sm text-accent underline underline-offset-2"
+                className="font-sans text-sm text-accent underline underline-offset-2"
               >
                 Palette #{p.id}
               </Link>
@@ -147,14 +148,14 @@ export async function ScreenDetail({ id }: { id: string }) {
         </div>
       )}
 
-      {screen.source_url && (
+      {safeHttpUrl(screen.source_url) && (
         <div>
           <p className="catalog-label text-3xs text-ink-faint">Source</p>
           <a
-            href={screen.source_url}
+            href={screen.source_url ?? undefined}
             target="_blank"
             rel="noreferrer"
-            className="break-all font-serif text-sm text-accent underline underline-offset-2"
+            className="break-all font-sans text-sm text-accent underline underline-offset-2"
           >
             {screen.source_url}
           </a>
@@ -170,7 +171,7 @@ export async function ScreenDetail({ id }: { id: string }) {
             <CopyButton text={screen.snippet} />
           </div>
           <pre className="overflow-x-auto border border-line bg-paper-raised p-3">
-            <code className="font-catalog-mono text-xs text-ink">{screen.snippet}</code>
+            <code className="font-mono text-xs text-ink">{screen.snippet}</code>
           </pre>
         </div>
       )}

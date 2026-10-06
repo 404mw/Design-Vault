@@ -12,6 +12,7 @@
     "@radix-ui/react-dialog": "^1.1.23",
     "fontkit": "^2.0.4",
     "libarchive.js": "2.0.2",
+    "lucide-react": "^1.52.0",
     "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"

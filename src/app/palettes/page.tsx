@@ -1,11 +1,23 @@
 export const dynamic = "force-dynamic";
 
 import { db } from "@/lib/db";
-import { EmptyPlate, IndexBar, PlateGrid, SpecimenPlate } from "@/components/specimen";
-import { pickPillColor } from "@/lib/contrast";
-import Link from "next/link";
+import {
+  CardCopyButton,
+  EmptyPlate,
+  IndexBar,
+  NewButton,
+  PageHeader,
+  PlateGrid,
+  SpecimenPlate,
+} from "@/components/specimen";
+import { Palette } from "lucide-react";
 
-type PaletteRow = { id: number; name: string; created_at: string };
+type PaletteRow = {
+  id: number;
+  name: string;
+  created_at: string;
+  source_screen_id: number | null;
+};
 type ColorRow = {
   id: number;
   palette_id: number;
@@ -77,26 +89,21 @@ export default async function PalettesPage({
   }
 
   return (
-    <div>
-      <div className="mb-8 flex flex-col gap-4">
-        <div className="flex items-end justify-between gap-4">
-          <h1 className="font-display text-2xl text-ink">Palettes</h1>
-        </div>
-        <IndexBar
-          searchName="q"
-          searchPlaceholder="Search by color name, hex, role, or tag…"
-          defaultSearch={search}
-        >
-          <Link
-            href="/palettes/new"
-            className="catalog-label whitespace-nowrap border border-ink bg-ink px-5 py-2.5 text-2xs text-paper transition-colors hover:border-accent hover:bg-accent"
-          >
-            + New Palette
-          </Link>
-        </IndexBar>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        icon={<Palette />}
+        title="Palettes"
+        description="Colour palettes with named roles, hex values, and contrast checks."
+      />
+      <IndexBar
+        searchName="q"
+        searchPlaceholder="Search by color name, hex, role, or tag…"
+        defaultSearch={search}
+      >
+        <NewButton href="/palettes/new">New Palette</NewButton>
+      </IndexBar>
 
-      <PlateGrid columns="wide">
+      <PlateGrid>
         {palettes.length === 0 ? (
           <EmptyPlate>
             {search ? `No palettes match "${search}".` : "No palettes yet — add your first one."}
@@ -104,33 +111,59 @@ export default async function PalettesPage({
         ) : (
           palettes.map((palette) => {
             const colors = colorsByPalette.get(palette.id) ?? [];
-            const siblingHexes = colors.map((c) => c.hex);
             return (
               <SpecimenPlate
                 key={palette.id}
                 href={`/palettes/${palette.id}`}
-                aspectClassName="aspect-palette-swatch"
-                plateBorderClassName="border-line-strong"
+                icon={<Palette />}
+                title={`${colors.length} ${colors.length === 1 ? "colour" : "colours"}`}
+                specs={
+                  palette.source_screen_id != null
+                    ? [`From screen #${palette.source_screen_id}`]
+                    : undefined
+                }
+                linkLabel={`${colors.length}-colour palette${colors.length ? ": " + colors.map((c) => c.hex.toUpperCase()).join(", ") : ""}`}
+                createdAt={palette.created_at}
                 tags={tagsByPalette.get(palette.id)}
                 sample={
-                  <div className="flex h-full w-full flex-col gap-1">
+                  <div className="h-palette-strip flex w-full overflow-hidden rounded-sample border border-line">
                     {colors.map((c) => (
                       <span
                         key={c.id}
-                        className="relative flex h-full flex-1 items-center justify-center overflow-hidden"
+                        className="h-full flex-1"
                         style={{ backgroundColor: c.hex }}
-                      >
-                        <span
-                          className="font-display max-w-full truncate rounded-full px-6 py-1.5 text-center text-4xl font-black leading-tight"
-                          style={{ backgroundColor: pickPillColor(c.hex, siblingHexes), color: c.hex }}
-                        >
-                          {c.name}
-                        </span>
-                      </span>
+                      />
                     ))}
                   </div>
                 }
-              />
+              >
+                {colors.length > 0 && (
+                  <ul className="space-y-1.5">
+                    {colors.map((c) => {
+                      const nameIsHex = c.name.trim().toLowerCase() === c.hex.toLowerCase();
+                      return (
+                        <li key={c.id} className="flex items-center gap-2 text-2xs">
+                          <span
+                            aria-hidden
+                            className="size-swatch-dot shrink-0 rounded-full border border-line"
+                            style={{ backgroundColor: c.hex }}
+                          />
+                          {!nameIsHex && (
+                            <span className="min-w-0 truncate font-medium text-ink">{c.name}</span>
+                          )}
+                          <span className="shrink-0 font-mono uppercase text-ink-soft">{c.hex}</span>
+                          <span className="ml-auto flex shrink-0 items-center gap-2">
+                            {c.role !== "any" && (
+                              <span className="catalog-label text-3xs text-ink-faint">{c.role}</span>
+                            )}
+                            <CardCopyButton text={c.hex} label={`Copy ${c.hex.toUpperCase()}`} />
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </SpecimenPlate>
             );
           })
         )}

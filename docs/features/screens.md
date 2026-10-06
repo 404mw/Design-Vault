@@ -26,9 +26,12 @@ Search (`q`) matches against `why`, `page_type`, `layout_pattern`, or any linked
 the fixed vocabularies in `src/lib/constants.ts` (`PAGE_TYPES`, `LAYOUT_PATTERNS`, `VERDICTS`)
 before being applied — an unrecognized value is silently ignored rather than erroring.
 
-Each grid card (`SpecimenPlate`) shows the image or video (object-cover, top-aligned), its
-`page_type` and `layout_pattern` as specs, its tags, and a verdict stamp. Clicking a card navigates
-to `/screens/[id]`.
+The page opens with the shared `PageHeader` (`LayoutGrid` icon, title, one-line description). Each
+grid card (`SpecimenPlate`) shows the image or video at its natural aspect ratio (height capped,
+cropped from the top beyond the cap), `page_type` as the title, `why` as the description (omitted
+when empty), `layout_pattern` as the spec, its tags, a verdict badge on the media corner, and the
+created date. Clicking a card navigates to `/screens/[id]`. Card, masonry grid, and header behaviour
+are shared across panels; see `docs/features/app-shell.md`.
 
 Search and the filter dropdowns are client-driven, via the shared `IndexBar`/`FilterSelect`
 components (`src/components/specimen/IndexBar.tsx`): typing in the search field debounces 300ms
@@ -71,6 +74,17 @@ Fields:
   image, or a same-origin `/api/image-proxy` URL for a dragged remote one; `null` for video). An
   `existingPreview` prop (edit mode only) seeds the dropzone with the screen's current file/media
   type so it shows by default until replaced.
+
+  The dropzone is a clearly marked drop target: at rest, a larger box with an upload icon, the
+  heading "Drop an image or video here", a pale accent fill, and a dashed accent border. While a
+  file drag is anywhere over the window (including over the modal), the zone switches to an
+  emphasised state, and hovering directly over the zone is the strongest state. This comes from a
+  shared window-level file-drag hook (`useWindowFileDrag`, `src/lib/useWindowFileDrag.ts`) that only reacts to drags
+  carrying files; during such a drag the rest of the screen is blurred by the shared
+  `DropBackdrop` (see `docs/features/fonts.md`) while the zone stays sharp above it. A tab-image
+  drag that carries only a URL doesn't trigger the blur. While a dropzone is on screen, a file dropped outside it is ignored rather than
+  the browser opening or downloading it; text and link drags are unaffected, so the dragged-URL
+  fallback above still works when dropped on the zone.
 - **Page type** (required) — one of `PAGE_TYPES` (fixed vocabulary, rendered as a `<select>`, never
   free text).
 - **Layout pattern** (required) — one of `LAYOUT_PATTERNS`, same treatment.
@@ -83,7 +97,11 @@ Fields:
 - **Code snippet** (optional) — free text, paired with an optional **Language** select (`css` /
   `js` / blank).
 - **Source URL** (optional) — most saved specimens won't have one; that's expected, not an error
-  state.
+  state. When set it must be an `http://` or `https://` URL: `readScreenFormValues`
+  (`src/lib/screen-form.ts`) rejects anything else with "Source URL must start with http:// or
+  https://." via the shared `safeHttpUrl` / `SOURCE_URL_ERROR` (`src/lib/urls.ts`), so a
+  `javascript:` or `data:` value can't be stored. The detail view also renders the link only when
+  `safeHttpUrl` accepts the stored value, covering rows saved before validation existed.
 - **Tags** (optional) — comma-separated; each tag is lowercased, deduped, and upserted into the
   shared `tags` table. The input offers a preset list (`PRESET_TAGS` in `src/lib/constants.ts`)
   plus autocomplete against every tag name already in the DB, but typing a new one is just as valid

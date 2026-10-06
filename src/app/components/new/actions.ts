@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { saveUpload, saveUploadFromUrl, mediaTypeFromFilename } from "@/lib/uploads";
+import { safeHttpUrl, SOURCE_URL_ERROR } from "@/lib/urls";
 import { COMPONENT_TYPES, type ComponentType } from "@/lib/constants";
 
 export type NewComponentState = {
@@ -54,6 +55,10 @@ export async function createComponent(
   }
   if (!COMPONENT_TYPES.includes(component_type as ComponentType)) {
     return fail("Choose a valid component type.", values);
+  }
+
+  if (source_url && !safeHttpUrl(source_url)) {
+    return fail(SOURCE_URL_ERROR, values);
   }
 
   let filePath: string;

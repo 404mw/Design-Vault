@@ -24,7 +24,7 @@ export function Field({
 }
 
 const inputClass =
-  "w-full border border-line bg-paper px-3 py-2 font-serif text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent";
+  "w-full border border-line bg-paper px-3 py-2 font-sans text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent";
 
 export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${inputClass} ${props.className ?? ""}`} />;

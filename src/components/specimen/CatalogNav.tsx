@@ -3,47 +3,41 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const VOLUMES = [
-  { href: "/screens", label: "Screens", code: "VOL. I" },
-  { href: "/palettes", label: "Palettes", code: "VOL. II" },
-  { href: "/fonts", label: "Fonts", code: "VOL. III" },
-  { href: "/components", label: "Components", code: "VOL. IV" },
+const SECTIONS = [
+  { href: "/screens", label: "Screens", sub: "Gallery" },
+  { href: "/palettes", label: "Palettes", sub: "Colors" },
+  { href: "/fonts", label: "Fonts", sub: "Type" },
+  { href: "/components", label: "Components", sub: "UI Kit" },
 ] as const;
 
 export function CatalogNav() {
   const pathname = usePathname();
 
   return (
-    <header className="border-b border-line bg-paper">
-      <div className="mx-auto flex max-w-6xl items-baseline justify-between gap-4 px-4 py-4 sm:px-6 sm:py-5">
-        <Link href="/" className="flex items-baseline gap-3">
-          <span className="font-display text-lg text-ink sm:text-xl">Design Vault</span>
-          <span className="catalog-label hidden text-2xs text-ink-faint sm:inline">
-            A Specimen Catalog
+    <header className="border-b border-line bg-paper-raised">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 px-4 sm:px-6">
+        <Link href="/screens" className="flex items-center gap-4 py-3 sm:py-4">
+          <span className="text-lg font-semibold text-ink sm:text-xl">Design Vault</span>
+          <span className="catalog-label hidden border-l border-line-strong pl-4 text-2xs text-ink-faint sm:inline">
+            UI Screens &amp; Assets
           </span>
         </Link>
 
-        <nav className="flex items-baseline gap-0.5 sm:gap-1">
-          {VOLUMES.map((v) => {
-            const active = pathname?.startsWith(v.href);
+        <nav className="flex min-w-0 items-stretch sm:gap-2">
+          {SECTIONS.map((s) => {
+            const active = pathname?.startsWith(s.href);
             return (
               <Link
-                key={v.href}
-                href={v.href}
-                className={`group flex flex-col items-center px-2 py-1 sm:px-4 ${
-                  active ? "text-ink" : "text-ink-soft hover:text-ink"
+                key={s.href}
+                href={s.href}
+                className={`flex flex-col items-center justify-center border-b-nav-active px-1.5 py-3 sm:px-4 sm:py-4 ${
+                  active
+                    ? "border-accent text-accent"
+                    : "border-transparent text-ink hover:text-accent"
                 }`}
               >
-                <span className="catalog-number hidden text-3xs text-ink-faint sm:inline">
-                  {v.code}
-                </span>
-                <span
-                  className={`catalog-label text-2xs sm:text-xs ${
-                    active ? "border-b-nav-active border-accent" : ""
-                  }`}
-                >
-                  {v.label}
-                </span>
+                <span className="catalog-label text-3xs font-semibold tracking-wide sm:text-2xs sm:tracking-widest">{s.label}</span>
+                <span className="catalog-label text-3xs font-normal text-ink-faint">{s.sub}</span>
               </Link>
             );
           })}

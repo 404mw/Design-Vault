@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { safeHttpUrl, SOURCE_URL_ERROR } from "@/lib/urls";
 import {
   PAGE_TYPES,
   LAYOUT_PATTERNS,
@@ -48,6 +49,8 @@ export function readScreenFormValues(formData: FormData): {
     error = "Choose a valid layout pattern.";
   } else if (!VERDICTS.includes(values.verdict as Verdict)) {
     error = "Choose a verdict — love or hate.";
+  } else if (values.source_url && !safeHttpUrl(values.source_url)) {
+    error = SOURCE_URL_ERROR;
   }
 
   return { values, error };

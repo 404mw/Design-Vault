@@ -1,25 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useCopy } from "@/lib/useCopy";
 
 export function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard access can be denied by the browser; fail silently, this
-      // is a convenience, not a required path.
-    }
-  }
+  const { copied, copy } = useCopy(1500);
 
   return (
     <button
       type="button"
-      onClick={handleCopy}
+      onClick={() => copy(text)}
       className="catalog-label text-3xs text-ink-faint hover:text-ink"
     >
       {copied ? "Copied" : "Copy"}

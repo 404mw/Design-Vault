@@ -33,9 +33,21 @@ the filter are client-driven and instant — 300ms debounce on search, immediate
 via the same shared `IndexBar`/`FilterSelect` components `/screens` uses; see
 `docs/features/screens.md` for the mechanism.
 
-Each grid card (`SpecimenPlate`) shows the media, the component's `name` as title, its
-`component_type` as spec, and its tags. No verdict stamp — components carry no love/hate
-judgment, unlike screens.
+The page opens with the shared `PageHeader` (`Component` icon). Each grid card (`SpecimenPlate`)
+shows the media at its natural aspect ratio (height capped), the component's `name` as title, its
+`component_type` as spec, its tags, and the created date. No verdict badge — components carry no
+love/hate judgment, unlike screens. Shared card/grid/header behaviour: `docs/features/app-shell.md`.
+
+The grid query also reads `snippet`, `snippet_lang` and `source_url`. Below the heading, the card's
+`children` slot holds a details list that appears only when there is something to show:
+- **Snippet row**, when a snippet exists: a code icon, then "{LANG} snippet" (just "Snippet" when
+  there is no language), with a copy button (the shared card copy button) at the far right that
+  copies the full snippet. The card shows no code preview.
+- **Link row**, when `source_url` exists: a link icon and the URL's hostname (the raw URL if it
+  can't be parsed), with an external-link button (the shared card link button) at the far right. It
+  opens the source in a new tab (`noopener noreferrer`), not the detail view.
+
+A component with neither looks the same as a card without the list.
 
 ## Add form (`/components/new`)
 
@@ -49,7 +61,10 @@ Fields:
   clipboard paste, drag-and-drop, with the dragged-URL-fetched-server-side fallback for
   browser-tab drags — same mechanism as `/screens`' Specimen field; see `docs/features/screens.md`
   for the `dragged_url`/`saveUploadFromUrl` explanation. Files saved under
-  `public/uploads/components/`.
+  `public/uploads/components/`. The dropzone is the same marked drop target as on `/screens`
+  (upload icon, "Drop an image or video here" heading, pale accent fill, dashed accent border,
+  emphasised while a file drag is anywhere over the window, strongest when hovering the zone; file
+  drops that miss the zone are ignored while it is on screen) — see `docs/features/screens.md`.
 - **Component type** (required) — one of `COMPONENT_TYPES` (fixed vocabulary, `<select>`, never
   free text): `button`, `card`, `nav`, `form`, `modal`, `table`, `input`, `badge`, `tooltip`,
   `dropdown`, `pagination`, `tabs`, `accordion`, `toast`, `loader`, `avatar`, `other`.
@@ -58,6 +73,10 @@ Fields:
   options here are wider — `css` / `js` / `jsx` / `tsx` / blank, vs. `/screens`' `css` / `js` /
   blank — since component snippets are commonly JSX/TSX.
 - **Link** (optional) — most saved components won't have one; that's expected, not an error state.
+  When set it must be `http://` or `https://`; `createComponent` rejects anything else with the
+  shared `SOURCE_URL_ERROR` ("Source URL must start with http:// or https://.", `src/lib/urls.ts`).
+  The grid card's link row and the detail view both render the link only when `safeHttpUrl`
+  accepts the stored value, so an older unsafe value is simply not shown.
 - **Tags** (optional) — same comma-separated/preset/autocomplete mechanism as `/screens` and
   `/palettes` (see `docs/features/screens.md`), writing through the same shared `tags` table.
 

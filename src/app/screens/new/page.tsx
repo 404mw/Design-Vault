@@ -13,7 +13,7 @@ export default function NewScreenPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <header className="mb-8 border-b border-line-strong pb-4">
-        <h1 className="font-display text-2xl text-ink">File a New Specimen</h1>
+        <h1 className="font-sans text-2xl text-ink">File a New Specimen</h1>
       </header>
       <NewScreenForm tagNames={tagNames} />
     </div>
